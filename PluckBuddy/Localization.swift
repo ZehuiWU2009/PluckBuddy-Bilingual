@@ -38,6 +38,9 @@ final class LanguageManager: ObservableObject {
 
     var current: AppLanguage { AppLanguage(rawValue: selection) ?? .system }
 
+    /// 当前生效语言是否为英文（含跟随系统且系统为英文的情况），用于 logo 等资源切换
+    var isEnglish: Bool { resolvedLocaleID().hasPrefix("en") }
+
     init() { reloadBundle() }
 
     /// 根据当前选择解析出要加载的 .lproj 标识

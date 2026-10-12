@@ -39,8 +39,8 @@ struct WelcomeView: View {
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
                 
-                // 品牌标识
-                Image("LogoChinese")
+                // 品牌标识：按当前生效语言切换中英文 logo（英文用 LogoEnglish）
+                Image(LanguageManager.shared.isEnglish ? "LogoEnglish" : "LogoChinese")
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: 320)
