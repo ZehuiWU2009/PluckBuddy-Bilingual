@@ -42,11 +42,11 @@ struct FriendPKView: View {
             HStack {
                 Image(systemName: "info.circle.fill")
                     .foregroundColor(.blue)
-                Text("好友PK说明")
+                Text(L("好友PK说明"))
                     .font(.headline)
             }
             
-            Text("好友可以上传练习视频，与你比拼技巧。点击卡片查看好友的练习视频和数据对比。")
+            Text(L("好友可以上传练习视频，与你比拼技巧。点击卡片查看好友的练习视频和数据对比。"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -104,17 +104,17 @@ struct FriendPKCard: View {
                 
                 // 数据对比
                 HStack(spacing: 0) {
-                    statColumn(title: "分数", value: "\(friend.score)", color: .blue)
+                    statColumn(title: L("分数"), value: "\(friend.score)", color: .blue)
                     
                     Divider()
                         .frame(height: 50)
                     
-                    statColumn(title: "速度", value: "\(friend.speed) BPM", color: .orange)
+                    statColumn(title: L("速度"), value: "\(friend.speed) BPM", color: .orange)
                     
                     Divider()
                         .frame(height: 50)
                     
-                    statColumn(title: "稳定性", value: "\(friend.stability)%", color: .green)
+                    statColumn(title: L("稳定性"), value: "\(friend.stability)%", color: .green)
                 }
                 .padding(.vertical, 8)
             }
@@ -164,11 +164,11 @@ struct FriendVideoDetailView: View {
                 }
                 .padding()
             }
-            .navigationTitle("好友视频")
+            .navigationTitle(L("好友视频"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
+                    Button(L("完成")) {
                         dismiss()
                     }
                 }
@@ -188,11 +188,11 @@ struct FriendVideoDetailView: View {
                     .font(.system(size: 60))
                     .foregroundColor(.white)
                 
-                Text("点击播放视频")
+                Text(L("点击播放视频"))
                     .font(.caption)
                     .foregroundColor(.white)
                 
-                Text("(离线模式暂不支持)")
+                Text(L("(离线模式暂不支持)"))
                     .font(.caption2)
                     .foregroundColor(.white.opacity(0.7))
             }
@@ -218,7 +218,7 @@ struct FriendVideoDetailView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
-                Text("3天前上传")
+                Text(L("3天前上传"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -234,13 +234,13 @@ struct FriendVideoDetailView: View {
     
     private var comparisonSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("数据对比")
+            Text(L("数据对比"))
                 .font(.headline)
             
             VStack(spacing: 12) {
-                comparisonRow(title: "得分", myValue: "1850", friendValue: "\(friend.score)", unit: "分")
-                comparisonRow(title: "速度", myValue: "115", friendValue: "\(friend.speed)", unit: "BPM")
-                comparisonRow(title: "稳定性", myValue: "82", friendValue: "\(friend.stability)", unit: "%")
+                comparisonRow(title: L("得分"), myValue: "1850", friendValue: "\(friend.score)", unit: L("分"))
+                comparisonRow(title: L("速度"), myValue: "115", friendValue: "\(friend.speed)", unit: "BPM")
+                comparisonRow(title: L("稳定性"), myValue: "82", friendValue: "\(friend.stability)", unit: "%")
             }
             .padding()
             .background(
@@ -260,7 +260,7 @@ struct FriendVideoDetailView: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 2) {
-                Text("我")
+                Text(L("我"))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Text("\(myValue) \(unit)")
@@ -286,12 +286,12 @@ struct FriendVideoDetailView: View {
     
     private var commentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("评论")
+            Text(L("评论"))
                 .font(.headline)
             
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(0..<3) { index in
-                    commentRow(username: "用户\(index + 1)", comment: "弹得真好！向你学习 🎵")
+                    commentRow(username: L("用户") + "\(index + 1)", comment: L("弹得真好！向你学习 🎵"))
                 }
             }
             .padding()
@@ -300,7 +300,7 @@ struct FriendVideoDetailView: View {
                     .fill(Color(.systemGray6))
             )
             
-            Text("评论功能在线版本中可用")
+            Text(L("评论功能在线版本中可用"))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)

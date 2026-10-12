@@ -23,7 +23,7 @@ struct WaveSettingsSheet: View {
                     // 目标速度（BPM）- 扫弦通常较慢
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("目标速度")
+                            Text(L("目标速度"))
                                 .font(.headline)
                             Spacer()
                             Text("\(Int(targetBPM)) BPM")
@@ -61,7 +61,7 @@ struct WaveSettingsSheet: View {
                     // 目标时长
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("目标时长")
+                            Text(L("目标时长"))
                                 .font(.headline)
                             Spacer()
                             if targetDuration > 0 {
@@ -70,31 +70,31 @@ struct WaveSettingsSheet: View {
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.green)
                             } else {
-                                Text("不限")
+                                Text(L("不限"))
                                     .font(.title3)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.secondary)
                             }
                         }
                         
-                        Picker("时长", selection: $targetDuration) {
-                            Text("不限").tag(TimeInterval(0))
-                            Text("1 分钟").tag(TimeInterval(60))
-                            Text("3 分钟").tag(TimeInterval(180))
-                            Text("5 分钟").tag(TimeInterval(300))
-                            Text("10 分钟").tag(TimeInterval(600))
-                            Text("15 分钟").tag(TimeInterval(900))
-                            Text("20 分钟").tag(TimeInterval(1200))
-                            Text("30 分钟").tag(TimeInterval(1800))
+                        Picker(L("时长"), selection: $targetDuration) {
+                            Text(L("不限")).tag(TimeInterval(0))
+                            Text(L("1 分钟")).tag(TimeInterval(60))
+                            Text(L("3 分钟")).tag(TimeInterval(180))
+                            Text(L("5 分钟")).tag(TimeInterval(300))
+                            Text(L("10 分钟")).tag(TimeInterval(600))
+                            Text(L("15 分钟")).tag(TimeInterval(900))
+                            Text(L("20 分钟")).tag(TimeInterval(1200))
+                            Text(L("30 分钟")).tag(TimeInterval(1800))
                         }
                         .pickerStyle(.segmented)
                     }
                     .padding(.vertical, 4)
                     
                 } header: {
-                    Label("练习目标", systemImage: "target")
+                    Label(L("练习目标"), systemImage: "target")
                 } footer: {
-                    Text("设置您的扫弦练习目标速度和时长")
+                    Text(L("设置您的扫弦练习目标速度和时长"))
                 }
                 
                 // MARK: - 节拍器设置
@@ -104,7 +104,7 @@ struct WaveSettingsSheet: View {
                         HStack {
                             Image(systemName: "metronome")
                                 .foregroundStyle(.orange)
-                            Text("启用节拍器")
+                            Text(L("启用节拍器"))
                                 .font(.headline)
                         }
                     }
@@ -113,14 +113,14 @@ struct WaveSettingsSheet: View {
                     // 节拍器音色（仅在启用时显示）
                     if metronomeEnabled {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("节拍器音色")
+                            Text(L("节拍器音色"))
                                 .font(.headline)
                             
-                            Picker("音色", selection: $metronomeSoundType) {
+                            Picker(L("音色"), selection: $metronomeSoundType) {
                                 ForEach(MetronomeSoundType.allCases) { type in
                                     HStack {
                                         Image(systemName: type.icon)
-                                        Text(type.rawValue)
+                                        Text(type.displayName)
                                     }
                                     .tag(type)
                                 }
@@ -132,12 +132,12 @@ struct WaveSettingsSheet: View {
                     }
                     
                 } header: {
-                    Label("节拍器", systemImage: "speaker.wave.2")
+                    Label(L("节拍器"), systemImage: "speaker.wave.2")
                 } footer: {
                     if metronomeEnabled {
-                        Text("节拍器将以您设定的目标速度播放，帮助您保持稳定的扫弦节奏")
+                        Text(L("节拍器将以您设定的目标速度播放，帮助您保持稳定的扫弦节奏"))
                     } else {
-                        Text("开启节拍器以获得节奏辅助")
+                        Text(L("开启节拍器以获得节奏辅助"))
                     }
                 }
                 
@@ -146,28 +146,28 @@ struct WaveSettingsSheet: View {
                     VStack(alignment: .leading, spacing: 12) {
                         TipRow(
                             icon: "arrow.up.arrow.down",
-                            title: "练习两个方向",
-                            description: "向上扫和向下扫都要练习，保持方向平衡"
+                            title: L("练习两个方向"),
+                            description: L("向上扫和向下扫都要练习，保持方向平衡")
                         )
                         
                         Divider()
                         
                         TipRow(
                             icon: "bolt.fill",
-                            title: "控制力度",
-                            description: "尝试保持稳定的扫弦力度，避免忽强忽弱"
+                            title: L("控制力度"),
+                            description: L("尝试保持稳定的扫弦力度，避免忽强忽弱")
                         )
                         
                         Divider()
                         
                         TipRow(
                             icon: "waveform.path",
-                            title: "节奏稳定",
-                            description: "跟随节拍器练习，逐步提高速度"
+                            title: L("节奏稳定"),
+                            description: L("跟随节拍器练习，逐步提高速度")
                         )
                     }
                 } header: {
-                    Label("练习技巧", systemImage: "star.fill")
+                    Label(L("练习技巧"), systemImage: "star.fill")
                 }
                 
                 // MARK: - 说明
@@ -175,35 +175,35 @@ struct WaveSettingsSheet: View {
                     VStack(alignment: .leading, spacing: 12) {
                         InfoRow(
                             icon: "waveform",
-                            title: "扫弦检测",
-                            description: "自动识别向上和向下的扫弦动作"
+                            title: L("扫弦检测"),
+                            description: L("自动识别向上和向下的扫弦动作")
                         )
                         
                         Divider()
                         
                         InfoRow(
                             icon: "drop.fill",
-                            title: "水波效果",
-                            description: "根据扫弦力度生成不同大小的水波"
+                            title: L("水波效果"),
+                            description: L("根据扫弦力度生成不同大小的水波")
                         )
                         
                         Divider()
                         
                         InfoRow(
                             icon: "star.fill",
-                            title: "得分系统",
-                            description: "根据力度和方向平衡获得分数"
+                            title: L("得分系统"),
+                            description: L("根据力度和方向平衡获得分数")
                         )
                     }
                 } header: {
-                    Label("功能说明", systemImage: "info.circle")
+                    Label(L("功能说明"), systemImage: "info.circle")
                 }
             }
-            .navigationTitle("练习设置")
+            .navigationTitle(L("练习设置"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") {
+                    Button(L("完成")) {
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -219,14 +219,14 @@ struct WaveSettingsSheet: View {
     private var durationText: String {
         let minutes = Int(targetDuration / 60)
         if minutes < 60 {
-            return "\(minutes) 分钟"
+            return "\(minutes) " + L("分钟")
         } else {
             let hours = minutes / 60
             let remainingMinutes = minutes % 60
             if remainingMinutes == 0 {
-                return "\(hours) 小时"
+                return "\(hours) " + L("小时")
             } else {
-                return "\(hours) 小时 \(remainingMinutes) 分钟"
+                return "\(hours) " + L("小时") + " \(remainingMinutes) " + L("分钟")
             }
         }
     }
@@ -235,19 +235,19 @@ struct WaveSettingsSheet: View {
         let bpm = Int(targetBPM)
         switch bpm {
         case 0..<50:
-            return "极慢 - 适合初学者基础练习"
+            return L("极慢 - 适合初学者基础练习")
         case 50..<70:
-            return "慢速 - 适合稳定性练习"
+            return L("慢速 - 适合稳定性练习")
         case 70..<90:
-            return "中慢速 - 适合基础扫弦"
+            return L("中慢速 - 适合基础扫弦")
         case 90..<110:
-            return "中速 - 适合日常练习"
+            return L("中速 - 适合日常练习")
         case 110..<140:
-            return "中快速 - 适合进阶练习"
+            return L("中快速 - 适合进阶练习")
         case 140..<170:
-            return "快速 - 适合高级练习"
+            return L("快速 - 适合高级练习")
         default:
-            return "极快 - 适合专业级练习"
+            return L("极快 - 适合专业级练习")
         }
     }
 }

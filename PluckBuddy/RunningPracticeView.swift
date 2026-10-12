@@ -68,7 +68,7 @@ struct RunningPracticeView: View {
                         HStack(spacing: 12) {
                             Image(systemName: viewModel.isRunning ? "stop.circle.fill" : "play.circle.fill")
                                 .font(.title2)
-                            Text(viewModel.isRunning ? "停止练习" : "开始练习")
+                            Text(viewModel.isRunning ? L("停止练习") : L("开始练习"))
                                 .fontWeight(.semibold)
                         }
                         .font(.title3)
@@ -97,7 +97,7 @@ struct RunningPracticeView: View {
                 )
             )
         }
-        .navigationTitle("弹挑跑步")
+        .navigationTitle(L("弹挑跑步"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -178,9 +178,9 @@ struct TopControlBar: View {
                     .font(.title3)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("目标速度")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        Text(L("目标速度"))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     
                     HStack(spacing: 4) {
                         Text("\(Int(targetBPM))")
@@ -205,7 +205,7 @@ struct TopControlBar: View {
                     .font(.title3)
                 
                 VStack(alignment: .center, spacing: 2) {
-                    Text("剩余时间")
+                    Text(L("剩余时间"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Text(formatTime(remainingTime))
@@ -292,7 +292,7 @@ struct CompactRunningSceneView: View {
                                 .foregroundStyle(.yellow)
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("得分")
+                                Text(L("得分"))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Text("\(score)")
@@ -655,28 +655,28 @@ struct PracticeSettingsSheet: View {
     
     // 预设时长选项
     private let durationPresets: [(String, TimeInterval)] = [
-        ("1分钟", 60),
-        ("3分钟", 180),
-        ("5分钟", 300),
-        ("10分钟", 600),
-        ("15分钟", 900),
-        ("30分钟", 1800)
+        (L("1分钟"), 60),
+        (L("3分钟"), 180),
+        (L("5分钟"), 300),
+        (L("10分钟"), 600),
+        (L("15分钟"), 900),
+        (L("30分钟"), 1800)
     ]
     
     // 格式化时长显示
     private func formatDuration(_ seconds: TimeInterval) -> String {
         let minutes = Int(seconds) / 60
         if minutes == 0 {
-            return "30秒"
+            return L("30秒")
         } else if minutes < 60 {
-            return "\(minutes)分钟"
+            return "\(minutes)" + L("分钟")
         } else {
             let hours = minutes / 60
             let mins = minutes % 60
             if mins == 0 {
-                return "\(hours)小时"
+                return "\(hours)" + L("小时")
             } else {
-                return "\(hours)小时\(mins)分钟"
+                return "\(hours)" + L("小时") + "\(mins)" + L("分钟")
             }
         }
     }
@@ -739,13 +739,13 @@ struct PracticeSettingsSheet: View {
                             .tint(.blue)
                         
                         // 提示文字
-                        Text("范围: 36-220 BPM")
+                        Text(L("范围: 36-220 BPM"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
                 } header: {
-                    Label("目标速度", systemImage: "target")
+                    Label(L("目标速度"), systemImage: "target")
                 }
                 
                 // 时长设置区
@@ -765,11 +765,11 @@ struct PracticeSettingsSheet: View {
                             .tint(.orange)
                         
                         HStack {
-                            Text("30秒")
+                            Text(L("30秒"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            Text("60分钟")
+                            Text(L("60分钟"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -778,7 +778,7 @@ struct PracticeSettingsSheet: View {
                     
                     // 快捷选择按钮
                     VStack(spacing: 8) {
-                        Text("快捷选择")
+                        Text(L("快捷选择"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -810,7 +810,7 @@ struct PracticeSettingsSheet: View {
                         }
                     }
                 } header: {
-                    Label("训练时长", systemImage: "timer")
+                    Label(L("训练时长"), systemImage: "timer")
                 }
                 
                 // ✨ 节拍器设置区（新增）
@@ -822,10 +822,10 @@ struct PracticeSettingsSheet: View {
                                 .foregroundStyle(localMetronomeEnabled ? .green : .secondary)
                                 .font(.title3)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("启用节拍器")
+                                Text(L("启用节拍器"))
                                     .font(.body)
                                 if localMetronomeEnabled {
-                                    Text("将在练习开始时自动播放")
+                                    Text(L("将在练习开始时自动播放"))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -836,11 +836,11 @@ struct PracticeSettingsSheet: View {
                     
                     // 音色选择（只在启用时显示）
                     if localMetronomeEnabled {
-                        Picker("节拍器音色", selection: $localSoundType) {
+                        Picker(L("节拍器音色"), selection: $localSoundType) {
                             ForEach(MetronomeSoundType.allCases) { type in
                                 HStack(spacing: 8) {
                                     Image(systemName: type.icon)
-                                    Text(type.rawValue)
+                                    Text(type.displayName)
                                 }
                                 .tag(type)
                             }
@@ -848,26 +848,26 @@ struct PracticeSettingsSheet: View {
                         .pickerStyle(.menu)
                     }
                 } header: {
-                    Label("节拍器", systemImage: "metronome")
+                    Label(L("节拍器"), systemImage: "metronome")
                 } footer: {
                     if localMetronomeEnabled {
-                        Text("节拍器将使用与练习相同的速度（\(Int(localBPM)) BPM）")
+                        Text(L("节拍器将使用与练习相同的速度（") + "\(Int(localBPM)) BPM" + L("）"))
                     } else {
-                        Text("开启节拍器可帮助您保持稳定的练习节奏")
+                        Text(L("开启节拍器可帮助您保持稳定的练习节奏"))
                     }
                 }
             }
-            .navigationTitle("练习设置")
+            .navigationTitle(L("练习设置"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
+                    Button(L("取消")) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("确认") {
+                    Button(L("确认")) {
                         targetBPM = localBPM
                         targetDuration = localDuration
                         metronomeEnabled = localMetronomeEnabled  // ✨ 保存节拍器开关

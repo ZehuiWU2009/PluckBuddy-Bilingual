@@ -21,7 +21,7 @@ class WaveViewModel: ObservableObject {
     @Published var averageStrength: Double = 0 // 平均力度
     @Published var directionBalance: Double = 0.5 // 方向平衡度
     @Published var score: Int = 0 // 得分
-    @Published var statusMessage = "准备开始"
+    @Published var statusMessage = L("准备开始")
     @Published var sessionDuration: TimeInterval = 0 // 当前练习时长（秒）
     @Published var targetDuration: TimeInterval = 300 // 目标时长（默认5分钟）
     @Published var targetBPM: Double = 60 // ✨ 新增：目标速度（BPM，扫弦通常较慢）
@@ -68,7 +68,7 @@ class WaveViewModel: ObservableObject {
             
             let hasPermission = await manager.requestMicrophonePermission()
             guard hasPermission else {
-                statusMessage = "需要麦克风权限"
+                statusMessage = L("需要麦克风权限")
                 return
             }
             
@@ -102,13 +102,13 @@ class WaveViewModel: ObservableObject {
                 
                 isRunning = true
                 startTime = Date()
-                statusMessage = "开始扫弦吧！"
+                statusMessage = L("开始扫弦吧！")
                 
                 // ✨ 启动时长计时器
                 startDurationTimer()
                 
             } catch {
-                statusMessage = "音频启动失败"
+                statusMessage = L("音频启动失败")
                 print("Audio error: \(error.localizedDescription)")
             }
         }
@@ -285,45 +285,45 @@ class WaveViewModel: ObservableObject {
         }
         
         if sweepCount == 0 {
-            statusMessage = "开始扫弦吧！"
+            statusMessage = L("开始扫弦吧！")
             return
         }
         
         // 根据力度给出反馈
         if averageStrength > 0.7 {
-            statusMessage = "💪 力度很好！"
+            statusMessage = L("💪 力度很好！")
         } else if averageStrength > 0.5 {
-            statusMessage = "👍 力度不错！"
+            statusMessage = L("👍 力度不错！")
         } else if averageStrength > 0.3 {
-            statusMessage = "👌 可以再用力一点"
+            statusMessage = L("👌 可以再用力一点")
         } else {
-            statusMessage = "🎵 试着加大力度"
+            statusMessage = L("🎵 试着加大力度")
         }
         
         // 方向平衡提示
         if sweepCount >= 5 {
             if directionBalance < 0.2 {
-                statusMessage += "\n尝试两个方向都练习"
+                statusMessage += L("\n尝试两个方向都练习")
             } else if directionBalance > 0.4 {
-                statusMessage += "\n方向平衡很好！"
+                statusMessage += L("\n方向平衡很好！")
             }
         }
     }
     
     private func generateSummary() -> String {
         guard sweepCount > 0 else {
-            return "准备开始"
+            return L("准备开始")
         }
         
         let minutes = Int(sessionDuration / 60)
         let seconds = Int(sessionDuration.truncatingRemainder(dividingBy: 60))
         
-        var summary = "练习结束！\n"
-        summary += "时长: \(minutes):\(String(format: "%02d", seconds))\n"
-        summary += "扫弦: \(sweepCount) 次\n"
-        summary += "向上: \(upCount) 次 | 向下: \(downCount) 次\n"
-        summary += "平均力度: \(String(format: "%.1f", averageStrength * 100))%\n"
-        summary += "得分: \(score)"
+        var summary = L("练习结束！\n")
+        summary += String(format: L("时长: %d:%02d\n"), minutes, seconds)
+        summary += String(format: L("扫弦: %d 次\n"), sweepCount)
+        summary += String(format: L("向上: %d 次 | 向下: %d 次\n"), upCount, downCount)
+        summary += String(format: L("平均力度: %.1f%%\n"), averageStrength * 100)
+        summary += String(format: L("得分: %d"), score)
         
         return summary
     }
@@ -384,7 +384,7 @@ class WaveViewModel: ObservableObject {
                 // ✨ 检查是否达到目标时长
                 if self.targetDuration > 0 && self.sessionDuration >= self.targetDuration {
                     self.stopPractice()
-                    self.statusMessage = "🎉 完成目标时长！"
+                    self.statusMessage = L("🎉 完成目标时长！")
                 }
             }
         }

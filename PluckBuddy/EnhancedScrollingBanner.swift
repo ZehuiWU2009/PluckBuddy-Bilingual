@@ -29,7 +29,7 @@ struct EnhancedScrollingBanner: View {
                     .foregroundStyle(technique.color)
                     .font(.title3)
                 
-                Text("\(technique.rawValue)核心要求")
+                Text(String(format: L("%@核心要求"), technique.displayName))
                     .font(.subheadline)
                     .fontWeight(.bold)
                 

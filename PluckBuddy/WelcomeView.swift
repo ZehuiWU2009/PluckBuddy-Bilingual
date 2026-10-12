@@ -47,13 +47,13 @@ struct WelcomeView: View {
                     .padding(.horizontal, 24)
                 
                 // 练习引导语
-                Text("今天也来练 5 分钟吧！")
+                Text(L("今天也来练 5 分钟吧！"))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(Self.brandPurple)
                     .padding(.top, 4)
                 
                 // 功能副标题
-                Text("琵琶陪练 · AI 指法分析 · 智能调音")
+                Text(L("琵琶陪练 · AI 指法分析 · 智能调音"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Self.brandPurple.opacity(0.6))
                     .padding(.top, 6)
@@ -62,8 +62,8 @@ struct WelcomeView: View {
                 
                 // 开发者信息
                 VStack(spacing: 3) {
-                    Text("开发者：吴泽荟")
-                    Text("学校：武汉康礼高级中学")
+                    Text(L("开发者：吴泽荟"))
+                    Text(L("学校：武汉康礼高级中学"))
                 }
                 .font(.system(size: 12))
                 .foregroundStyle(Self.brandPurple.opacity(0.55))
@@ -111,7 +111,7 @@ struct WelcomeView: View {
     private var skipButton: some View {
         Button(action: beginDismiss) {
             HStack(spacing: 4) {
-                Text("跳过")
+                Text(L("跳过"))
                 Text("\(remaining)")
                     .monospacedDigit()
                     .contentTransition(.numericText())

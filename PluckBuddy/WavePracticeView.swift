@@ -26,7 +26,7 @@ struct WavePracticeView: View {
                 // ✨ 自定义标题栏（带返回和设置按钮）
                 ZStack {
                     // 标题（居中）
-                    Text("扫弦水波")
+                    Text(L("扫弦水波"))
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(
                             LinearGradient(
@@ -82,10 +82,10 @@ struct WavePracticeView: View {
                         
                         // 顶部统计栏（增加顶部间距）
                         HStack(spacing: 30) {
-                            WaveStatItem(title: "总计", value: "\(viewModel.sweepCount)", icon: "waveform")
-                            WaveStatItem(title: "向上", value: "\(viewModel.upCount)", icon: "arrow.up")
-                            WaveStatItem(title: "向下", value: "\(viewModel.downCount)", icon: "arrow.down")
-                            WaveStatItem(title: "得分", value: "\(viewModel.score)", icon: "star.fill")
+                            WaveStatItem(title: L("总计"), value: "\(viewModel.sweepCount)", icon: "waveform")
+                            WaveStatItem(title: L("向上"), value: "\(viewModel.upCount)", icon: "arrow.up")
+                            WaveStatItem(title: L("向下"), value: "\(viewModel.downCount)", icon: "arrow.down")
+                            WaveStatItem(title: L("得分"), value: "\(viewModel.score)", icon: "star.fill")
                         }
                         .padding()
                         .background(.ultraThinMaterial)
@@ -149,7 +149,7 @@ struct WavePracticeView: View {
                                     Image(systemName: "hand.raised.fill")
                                         .font(.system(size: 40))
                                         .foregroundStyle(.secondary)
-                                    Text("开始扫弦...")
+                                    Text(L("开始扫弦..."))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -167,7 +167,7 @@ struct WavePracticeView: View {
                             HStack {
                                 Image(systemName: "bolt.fill")
                                     .foregroundStyle(.secondary)
-                                Text("平均力度")
+                                Text(L("平均力度"))
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
@@ -185,7 +185,7 @@ struct WavePracticeView: View {
                             HStack {
                                 Image(systemName: "arrow.up.arrow.down")
                                     .foregroundStyle(.secondary)
-                                Text("方向平衡")
+                                Text(L("方向平衡"))
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 Spacer()
@@ -220,7 +220,7 @@ struct WavePracticeView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: viewModel.isRunning ? "stop.fill" : "play.fill")
                                     .font(.title3)
-                                Text(viewModel.isRunning ? "停止练习" : "开始练习")
+                                Text(viewModel.isRunning ? L("停止练习") : L("开始练习"))
                                     .fontWeight(.semibold)
                                     .font(.headline)
                             }

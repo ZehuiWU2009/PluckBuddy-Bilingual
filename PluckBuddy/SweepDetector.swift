@@ -172,8 +172,8 @@ enum SweepDirection {
     
     var description: String {
         switch self {
-        case .up: return "向上"
-        case .down: return "向下"
+        case .up: return L("向上")
+        case .down: return L("向下")
         }
     }
     
@@ -195,10 +195,10 @@ enum StrengthLevel {
     
     var description: String {
         switch self {
-        case .weak: return "轻"
-        case .medium: return "中"
-        case .strong: return "重"
-        case .veryStrong: return "很重"
+        case .weak: return L("轻")
+        case .medium: return L("中")
+        case .strong: return L("重")
+        case .veryStrong: return L("很重")
         }
     }
     

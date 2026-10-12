@@ -31,11 +31,11 @@ struct AchievementView: View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("我的成就")
+                    Text(L("我的成就"))
                         .font(.title2)
                         .fontWeight(.bold)
                     
-                    Text("继续努力解锁更多勋章")
+                    Text(L("继续努力解锁更多勋章"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -139,7 +139,7 @@ struct SocialAchievementCard: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                         .font(.caption)
-                    Text("已解锁")
+                    Text(L("已解锁"))
                         .font(.caption2)
                         .foregroundColor(.green)
                 }

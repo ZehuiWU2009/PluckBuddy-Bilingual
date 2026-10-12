@@ -203,9 +203,9 @@ struct PluckEvent {
         
         var description: String {
             switch self {
-            case .weak: return "弱"
-            case .medium: return "中"
-            case .strong: return "强"
+            case .weak: return L("弱")
+            case .medium: return L("中")
+            case .strong: return L("强")
             }
         }
     }

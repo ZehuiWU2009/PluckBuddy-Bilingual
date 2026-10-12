@@ -138,11 +138,11 @@ class AudioManager: NSObject, ObservableObject {
         var errorDescription: String? {
             switch self {
             case .noPermission:
-                return "需要麦克风权限才能进行音高检测"
+                return L("需要麦克风权限才能进行音高检测")
             case .engineInitFailed:
-                return "音频引擎初始化失败"
+                return L("音频引擎初始化失败")
             case .noInputNode:
-                return "无法访问音频输入节点"
+                return L("无法访问音频输入节点")
             }
         }
     }

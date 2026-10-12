@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct HomeView: View {
+    @State private var showLangSheet = false
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -25,8 +27,8 @@ struct HomeView: View {
                         } label: {
                             FeatureCard(
                                 icon: "🎵",
-                                title: "智能调音",
-                                subtitle: "琵琶四弦定音助手",
+                                title: L("智能调音"),
+                                subtitle: L("琵琶四弦定音助手"),
                                 color: .blue
                             )
                         }
@@ -37,8 +39,8 @@ struct HomeView: View {
                         } label: {
                             FeatureCard(
                                 icon: "🏃",
-                                title: "弹挑跑步",
-                                subtitle: "节奏练习变成跑步游戏",
+                                title: L("弹挑跑步"),
+                                subtitle: L("节奏练习变成跑步游戏"),
                                 color: .green
                             )
                         }
@@ -49,8 +51,8 @@ struct HomeView: View {
                         } label: {
                             FeatureCard(
                                 icon: "🌸",
-                                title: "轮指花开",
-                                subtitle: "轮指练习看花朵绽放",
+                                title: L("轮指花开"),
+                                subtitle: L("轮指练习看花朵绽放"),
                                 color: .pink
                             )
                         }
@@ -61,8 +63,8 @@ struct HomeView: View {
                         } label: {
                             FeatureCard(
                                 icon: "🌊",
-                                title: "扫弦水波",
-                                subtitle: "扫弦力量可视化",
+                                title: L("扫弦水波"),
+                                subtitle: L("扫弦力量可视化"),
                                 color: .cyan
                             )
                         }
@@ -73,8 +75,8 @@ struct HomeView: View {
                         } label: {
                             FeatureCard(
                                 icon: "🎥",
-                                title: "智能指法教练",
-                                subtitle: "AI 实时分析你的弹奏姿势",
+                                title: L("智能指法教练"),
+                                subtitle: L("AI 实时分析你的弹奏姿势"),
                                 color: .purple
                             )
                         }
@@ -85,8 +87,8 @@ struct HomeView: View {
                         } label: {
                             FeatureCard(
                                 icon: "🏆",
-                                title: "我的成绩",
-                                subtitle: "查看练习历史与进步",
+                                title: L("我的成绩"),
+                                subtitle: L("查看练习历史与进步"),
                                 color: .orange
                             )
                         }
@@ -97,8 +99,8 @@ struct HomeView: View {
                         } label: {
                             FeatureCard(
                                 icon: "👥",
-                                title: "社交广场",
-                                subtitle: "排行榜 · 成就 · 好友PK\n（离线版）",
+                                title: L("社交广场"),
+                                subtitle: L("排行榜 · 成就 · 好友PK\n（离线版）"),
                                 color: .purple
                             )
                         }
@@ -129,11 +131,24 @@ struct HomeView: View {
                 )
                 .frame(width: 4, height: 26)
             
-            Text("弹拨搭子")
+            Text(L("弹拨搭子"))
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(.primary)
             
             Spacer()
+            
+            Button {
+                showLangSheet = true
+            } label: {
+                Image(systemName: "globe")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.primary)
+            }
+            .sheet(isPresented: $showLangSheet) {
+                LanguageSettingView()
+                    .environmentObject(LanguageManager.shared)
+            }
+            .padding(.trailing, 8)
         }
         .padding(.horizontal)
         .padding(.top, 8)

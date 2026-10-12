@@ -31,7 +31,7 @@ struct SocialSquareView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .navigationTitle("社交广场")
+            .navigationTitle(L("社交广场"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -47,15 +47,15 @@ struct SocialSquareView: View {
     
     private var topTabBar: some View {
         HStack(spacing: 0) {
-            TabButton(title: "排行榜", icon: "trophy.fill", isSelected: selectedTab == 0) {
+            TabButton(title: L("排行榜"), icon: "trophy.fill", isSelected: selectedTab == 0) {
                 withAnimation { selectedTab = 0 }
             }
             
-            TabButton(title: "成就", icon: "star.fill", isSelected: selectedTab == 1) {
+            TabButton(title: L("成就"), icon: "star.fill", isSelected: selectedTab == 1) {
                 withAnimation { selectedTab = 1 }
             }
             
-            TabButton(title: "好友PK", icon: "person.2.fill", isSelected: selectedTab == 2) {
+            TabButton(title: L("好友PK"), icon: "person.2.fill", isSelected: selectedTab == 2) {
                 withAnimation { selectedTab = 2 }
             }
         }

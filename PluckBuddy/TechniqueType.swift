@@ -10,10 +10,15 @@ import SwiftUI
 
 /// 琵琶技法类型
 enum TechniqueType: String, CaseIterable {
+    // rawValue 只能是字面量，保持中文原文；界面展示统一走 displayName
     case roll = "轮指"
     case sweep = "扫弦"
     case pluck = "弹挑"
     case unknown = "未识别"
+
+    /// 本地化显示名（中文原文即英文表的 key）
+    var displayName: String { L(rawValue) }
+
     
     /// 图标
     var icon: String {
@@ -38,10 +43,10 @@ enum TechniqueType: String, CaseIterable {
     /// 描述
     var description: String {
         switch self {
-        case .roll: return "快速连续的手指弹奏"
-        case .sweep: return "手臂带动的扫弦动作"
-        case .pluck: return "弹挑交替的基础技法"
-        case .unknown: return "等待识别中..."
+        case .roll: return L("快速连续的手指弹奏")
+        case .sweep: return L("手臂带动的扫弦动作")
+        case .pluck: return L("弹挑交替的基础技法")
+        case .unknown: return L("等待识别中...")
         }
     }
 }

@@ -2,15 +2,10 @@
 
 一款基于端侧 CoreML 的智能琵琶陪练 iOS 应用。摄像头识别手型 + 麦克风识别声音,实时给出指法评分、调音陪伴、节拍陪练,帮助习琴者在家也能练出标准音色与节奏。
 
-> 个人项目 · 源于自己的习琴需要,在长期练习中持续打磨
+> 参赛作品 · 移动应用创新赛（中小学组） · 启航赛道
 >
 > 开发者:吴泽荟  
 > 学校:武汉康礼高级中学
->
-> ---
->
-> **本项目已停止维护,由双语版继承:[PluckBuddy-Bilingual](https://github.com/ZehuiWU2009/PluckBuddy-Bilingual)(中英可切换,PluckBuddy 2.0)。**
-> Superseded by the bilingual edition: [PluckBuddy-Bilingual](https://github.com/ZehuiWU2009/PluckBuddy-Bilingual).
 
 ---
 
@@ -246,7 +241,14 @@ PluckBuddy/
 - 真机构建的 13 条代码警告全部消除。8 处闭包捕获语义改为显式弱引用,页面销毁时直接退出启动流程;3 处计时器回调改为在主线程上读取被隔离的属性;2 处统计了却没参与判定的方向计数删除
 - 中文版桌面显示名改为弹拨搭子,首页标题与麦克风权限说明同步更新。工程名、target 名与 Bundle ID 一律不变,两个版本可以共存安装
 - 国际版 App 图标换成英文版设计,默认、深色、着色三种外观一起更新;中文版欢迎页改用中文版 logo
-- 仓库清理:移出架构图与 logo 图片、可编辑源图和文档目录,README 不再引用任何图片
+   - 仓库清理:移出架构图与 logo 图片、可编辑源图和文档目录,README 不再引用任何图片
+
+### v1.4 · 中英双语可切换版(2026-10-12)
+
+- 新增中英双语可切换版本。首页右上角地球图标进入语言设置，可在「跟随系统 / 中文 / English」之间即时切换，不用退出 App 重装
+- 文案以中文原文为 key：英文译文集中在 en.lproj 下的 Localizable.strings，中文用 zh-Hans.lproj 的恒等映射表，取不到英文时回退为原文
+- 语言切换由 LanguageManager 单例管理，选择写入 UserDefaults；切语言时递增 token，让首页以 .id() 重建整棵视图树，所有 L() 就地重新取值
+- 双语版桌面显示名定为 PluckBuddy，Bundle ID 为 com.zehuiwu.pluckbuddy.bilingual，与中文版「弹拨搭子」、国际版 PluckBuddy 三个版本可共存安装
 
 ---
 
@@ -261,4 +263,4 @@ PluckBuddy/
 
 ## License
 
-个人项目源码,欢迎交流与学习。
+参赛作品源码,仅供评审与学习使用。

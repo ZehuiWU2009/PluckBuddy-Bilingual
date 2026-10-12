@@ -162,11 +162,11 @@ class VideoCaptureManager: NSObject {
         var errorDescription: String? {
             switch self {
             case .cameraNotAvailable:
-                return "摄像头不可用"
+                return L("摄像头不可用")
             case .cannotAddInput:
-                return "无法添加摄像头输入"
+                return L("无法添加摄像头输入")
             case .cannotAddOutput:
-                return "无法添加视频输出"
+                return L("无法添加视频输出")
             }
         }
     }

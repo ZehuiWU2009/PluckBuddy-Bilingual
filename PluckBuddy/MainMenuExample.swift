@@ -32,7 +32,7 @@ struct MainMenuExample: View {
                         // 智能调音
                         MenuCard(
                             icon: "tuningfork",
-                            title: "智能调音",
+                            title: L("智能调音"),
                             color: .blue,
                             action: { showTuner = true }
                         )
@@ -40,7 +40,7 @@ struct MainMenuExample: View {
                         // 弹挑跑步
                         MenuCard(
                             icon: "figure.run",
-                            title: "弹挑跑步",
+                            title: L("弹挑跑步"),
                             color: .green,
                             action: { showRunningPractice = true }
                         )
@@ -48,7 +48,7 @@ struct MainMenuExample: View {
                         // 轮指花开
                         MenuCard(
                             icon: "leaf.fill",
-                            title: "轮指花开",
+                            title: L("轮指花开"),
                             color: .pink,
                             action: { showFlowerPractice = true }
                         )
@@ -56,7 +56,7 @@ struct MainMenuExample: View {
                         // 扫弦水波
                         MenuCard(
                             icon: "waveform.path",
-                            title: "扫弦水波",
+                            title: L("扫弦水波"),
                             color: .cyan,
                             action: { showWavePractice = true }
                         )
@@ -64,7 +64,7 @@ struct MainMenuExample: View {
                         // 智能指法教练
                         MenuCard(
                             icon: "video.fill",
-                            title: "智能指法教练",
+                            title: L("智能指法教练"),
                             color: .orange,
                             action: { showTechniqueCoach = true }
                         )
@@ -72,7 +72,7 @@ struct MainMenuExample: View {
                         // 我的成绩
                         MenuCard(
                             icon: "chart.bar.fill",
-                            title: "我的成绩",
+                            title: L("我的成绩"),
                             color: .indigo,
                             action: { showMyResults = true }
                         )
@@ -109,7 +109,7 @@ struct MainMenuExample: View {
             Text("PluckBuddy")
                 .font(.system(size: 32, weight: .bold))
             
-            Text("智能琵琶练习助手")
+            Text(L("智能琵琶练习助手"))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -137,7 +137,7 @@ struct MainMenuExample: View {
                 // 文字信息
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("社交广场")
+                        Text(L("社交广场"))
                             .font(.title3)
                             .fontWeight(.bold)
                         
@@ -150,14 +150,14 @@ struct MainMenuExample: View {
                             .background(Capsule().fill(Color.red))
                     }
                     
-                    Text("排行榜 · 成就 · 好友PK")
+                    Text(L("排行榜 · 成就 · 好友PK"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
                     HStack(spacing: 4) {
                         Image(systemName: "wifi.slash")
                             .font(.caption2)
-                        Text("离线体验版")
+                        Text(L("离线体验版"))
                             .font(.caption)
                     }
                     .foregroundColor(.orange)

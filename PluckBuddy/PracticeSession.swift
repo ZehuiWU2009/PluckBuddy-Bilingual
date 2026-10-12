@@ -46,11 +46,11 @@ extension PracticeSession {
     /// 获取会话的类型名称
     var typeName: String {
         switch sessionType {
-        case "tuner": return "智能调音"
-        case "running": return "弹挑跑步"
-        case "flower": return "轮指花开"
-        case "wave": return "扫弦水波"
-        default: return "未知"
+        case "tuner": return L("智能调音")
+        case "running": return L("弹挑跑步")
+        case "flower": return L("轮指花开")
+        case "wave": return L("扫弦水波")
+        default: return L("未知")
         }
     }
     

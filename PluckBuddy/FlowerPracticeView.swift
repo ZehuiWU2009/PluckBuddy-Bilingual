@@ -36,9 +36,9 @@ struct FlowerPracticeView: View {
                     
                     // 顶部统计栏
                     HStack(spacing: 40) {
-                        FlowerStatItem(title: "轮指", value: "\(viewModel.rollCount)", icon: "hand.tap.fill")
-                        FlowerStatItem(title: "序列", value: "\(viewModel.sequenceCount)", icon: "rectangle.3.group")
-                        FlowerStatItem(title: "得分", value: "\(viewModel.score)", icon: "star.fill")
+                        FlowerStatItem(title: L("轮指"), value: "\(viewModel.rollCount)", icon: "hand.tap.fill")
+                        FlowerStatItem(title: L("序列"), value: "\(viewModel.sequenceCount)", icon: "rectangle.3.group")
+                        FlowerStatItem(title: L("得分"), value: "\(viewModel.score)", icon: "star.fill")
                     }
                     .padding()
                     .background(.ultraThinMaterial)
@@ -111,10 +111,10 @@ struct FlowerPracticeView: View {
                             Image(systemName: "speedometer")
                                 .font(.caption)  // ✨ 缩小图标
                                 .foregroundStyle(.secondary)
-                            Text("速度: \(String(format: "%.1f", viewModel.currentSpeed)) 次/秒")
+                            Text(String(format: L("速度: %.1f 次/秒"), viewModel.currentSpeed))
                                 .font(.subheadline)  // ✨ 缩小字体
                             Spacer()
-                            Text("均值: \(String(format: "%.1f", viewModel.averageSpeed))")
+                            Text(String(format: L("均值: %.1f"), viewModel.averageSpeed))
                                 .font(.caption)  // ✨ 缩小字体
                                 .foregroundStyle(.secondary)
                         }
@@ -125,7 +125,7 @@ struct FlowerPracticeView: View {
                                 Image(systemName: "waveform.path")
                                     .font(.caption)  // ✨ 缩小图标
                                     .foregroundStyle(.secondary)
-                                Text("均匀度")
+                                Text(L("均匀度"))
                                     .font(.subheadline)  // ✨ 缩小字体
                                 Spacer()
                                 Text("\(Int(viewModel.uniformity * 100))%")
@@ -159,7 +159,7 @@ struct FlowerPracticeView: View {
                     Button(action: togglePractice) {
                         HStack {
                             Image(systemName: viewModel.isRunning ? "stop.fill" : "play.fill")
-                            Text(viewModel.isRunning ? "停止练习" : "开始练习")
+                            Text(viewModel.isRunning ? L("停止练习") : L("开始练习"))
                                 .fontWeight(.semibold)
                         }
                         .font(.headline)  // ✨ 缩小字体
@@ -188,7 +188,7 @@ struct FlowerPracticeView: View {
                 )
             )
         }
-        .navigationTitle("轮指花开")
+        .navigationTitle(L("轮指花开"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

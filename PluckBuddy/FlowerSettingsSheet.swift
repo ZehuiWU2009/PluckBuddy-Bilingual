@@ -23,7 +23,7 @@ struct FlowerSettingsSheet: View {
                     // 目标速度（BPM）
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("目标速度")
+                            Text(L("目标速度"))
                                 .font(.headline)
                             Spacer()
                             Text("\(Int(targetBPM)) BPM")
@@ -50,7 +50,7 @@ struct FlowerSettingsSheet: View {
                     // 目标时长
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("目标时长")
+                            Text(L("目标时长"))
                                 .font(.headline)
                             Spacer()
                             if targetDuration > 0 {
@@ -59,31 +59,31 @@ struct FlowerSettingsSheet: View {
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.green)
                             } else {
-                                Text("不限")
+                                Text(L("不限"))
                                     .font(.title3)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.secondary)
                             }
                         }
                         
-                        Picker("时长", selection: $targetDuration) {
-                            Text("不限").tag(TimeInterval(0))
-                            Text("1 分钟").tag(TimeInterval(60))
-                            Text("3 分钟").tag(TimeInterval(180))
-                            Text("5 分钟").tag(TimeInterval(300))
-                            Text("10 分钟").tag(TimeInterval(600))
-                            Text("15 分钟").tag(TimeInterval(900))
-                            Text("20 分钟").tag(TimeInterval(1200))
-                            Text("30 分钟").tag(TimeInterval(1800))
+                        Picker(L("时长"), selection: $targetDuration) {
+                            Text(L("不限")).tag(TimeInterval(0))
+                            Text(L("1 分钟")).tag(TimeInterval(60))
+                            Text(L("3 分钟")).tag(TimeInterval(180))
+                            Text(L("5 分钟")).tag(TimeInterval(300))
+                            Text(L("10 分钟")).tag(TimeInterval(600))
+                            Text(L("15 分钟")).tag(TimeInterval(900))
+                            Text(L("20 分钟")).tag(TimeInterval(1200))
+                            Text(L("30 分钟")).tag(TimeInterval(1800))
                         }
                         .pickerStyle(.segmented)
                     }
                     .padding(.vertical, 4)
                     
                 } header: {
-                    Label("练习目标", systemImage: "target")
+                    Label(L("练习目标"), systemImage: "target")
                 } footer: {
-                    Text("设置您的练习目标速度和时长")
+                    Text(L("设置您的练习目标速度和时长"))
                 }
                 
                 // MARK: - 节拍器设置
@@ -93,7 +93,7 @@ struct FlowerSettingsSheet: View {
                         HStack {
                             Image(systemName: "metronome")
                                 .foregroundStyle(.orange)
-                            Text("启用节拍器")
+                            Text(L("启用节拍器"))
                                 .font(.headline)
                         }
                     }
@@ -102,14 +102,14 @@ struct FlowerSettingsSheet: View {
                     // 节拍器音色（仅在启用时显示）
                     if metronomeEnabled {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("节拍器音色")
+                            Text(L("节拍器音色"))
                                 .font(.headline)
                             
-                            Picker("音色", selection: $metronomeSoundType) {
+                            Picker(L("音色"), selection: $metronomeSoundType) {
                                 ForEach(MetronomeSoundType.allCases) { type in
                                     HStack {
                                         Image(systemName: type.icon)
-                                        Text(type.rawValue)
+                                        Text(type.displayName)
                                     }
                                     .tag(type)
                                 }
@@ -121,12 +121,12 @@ struct FlowerSettingsSheet: View {
                     }
                     
                 } header: {
-                    Label("节拍器", systemImage: "speaker.wave.2")
+                    Label(L("节拍器"), systemImage: "speaker.wave.2")
                 } footer: {
                     if metronomeEnabled {
-                        Text("节拍器将以您设定的目标速度播放，帮助您保持稳定的节奏")
+                        Text(L("节拍器将以您设定的目标速度播放，帮助您保持稳定的节奏"))
                     } else {
-                        Text("开启节拍器以获得节奏辅助")
+                        Text(L("开启节拍器以获得节奏辅助"))
                     }
                 }
                 
@@ -135,35 +135,35 @@ struct FlowerSettingsSheet: View {
                     VStack(alignment: .leading, spacing: 12) {
                         InfoRow(
                             icon: "hand.tap.fill",
-                            title: "轮指计数",
-                            description: "记录您每次完成的轮指动作"
+                            title: L("轮指计数"),
+                            description: L("记录您每次完成的轮指动作")
                         )
                         
                         Divider()
                         
                         InfoRow(
                             icon: "rectangle.3.group",
-                            title: "序列质量",
-                            description: "评估每个轮指序列的完成质量"
+                            title: L("序列质量"),
+                            description: L("评估每个轮指序列的完成质量")
                         )
                         
                         Divider()
                         
                         InfoRow(
                             icon: "star.fill",
-                            title: "得分系统",
-                            description: "根据速度、均匀度和质量获得分数"
+                            title: L("得分系统"),
+                            description: L("根据速度、均匀度和质量获得分数")
                         )
                     }
                 } header: {
-                    Label("功能说明", systemImage: "info.circle")
+                    Label(L("功能说明"), systemImage: "info.circle")
                 }
             }
-            .navigationTitle("练习设置")
+            .navigationTitle(L("练习设置"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") {
+                    Button(L("完成")) {
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -179,14 +179,14 @@ struct FlowerSettingsSheet: View {
     private var durationText: String {
         let minutes = Int(targetDuration / 60)
         if minutes < 60 {
-            return "\(minutes) 分钟"
+            return "\(minutes) " + L("分钟")
         } else {
             let hours = minutes / 60
             let remainingMinutes = minutes % 60
             if remainingMinutes == 0 {
-                return "\(hours) 小时"
+                return "\(hours) " + L("小时")
             } else {
-                return "\(hours) 小时 \(remainingMinutes) 分钟"
+                return "\(hours) " + L("小时") + " \(remainingMinutes) " + L("分钟")
             }
         }
     }

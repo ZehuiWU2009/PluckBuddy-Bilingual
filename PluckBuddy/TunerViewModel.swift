@@ -16,7 +16,7 @@ class TunerViewModel: ObservableObject {
     @Published var frequency: Double = 0.0
     @Published var centOffset: Double = 0.0
     @Published var isTuned: Bool = false
-    @Published var tuningMessage: String = "请弹奏琴弦"
+    @Published var tuningMessage: String = L("请弹奏琴弦")
     @Published var confidence: Double = 0.0 // 检测置信度
     @Published var waveformData: [Float] = Array(repeating: 0, count: 100) // 波形数据
     @Published var amplitudeLevel: Float = 0.0 // 当前振幅等级（用于可视化）
@@ -82,7 +82,7 @@ class TunerViewModel: ObservableObject {
             
             let hasPermission = await manager.requestMicrophonePermission()
             guard hasPermission else {
-                tuningMessage = "需要麦克风权限来检测音高"
+                tuningMessage = L("需要麦克风权限来检测音高")
                 return
             }
             
@@ -120,7 +120,7 @@ class TunerViewModel: ObservableObject {
                     // 反馈：开了过滤但当前帧不在「最近 0.5s 判为琵琶」的窗口内 → 给个等待提示
                     if self.pipaFilterEnabled && !self.pipaGate.isPipaRecent(within: 0.5) && features.rms > 0.008 {
                         Task { @MainActor in
-                            self.tuningMessage = "正在聆听…请弹奏琵琶"
+                            self.tuningMessage = L("正在聆听…请弹奏琵琶")
                         }
                     }
                     
@@ -152,7 +152,7 @@ class TunerViewModel: ObservableObject {
                     }
                 }
             } catch {
-                tuningMessage = "音频引擎启动失败"
+                tuningMessage = L("音频引擎启动失败")
                 print("Audio error: \(error.localizedDescription)")
             }
         }
@@ -212,13 +212,13 @@ class TunerViewModel: ObservableObject {
     
     private func updateTuningMessage() {
         if isTuned {
-            tuningMessage = "✓ 音准很好！"
+            tuningMessage = L("✓ 音准很好！")
         } else if centOffset > 10 {
-            tuningMessage = "再调低一点 ↓"
+            tuningMessage = L("再调低一点 ↓")
         } else if centOffset < -10 {
-            tuningMessage = "再调高一点 ↑"
+            tuningMessage = L("再调高一点 ↑")
         } else {
-            tuningMessage = "请弹奏琴弦"
+            tuningMessage = L("请弹奏琴弦")
         }
     }
     
@@ -228,7 +228,7 @@ class TunerViewModel: ObservableObject {
         centOffset = 0.0
         isTuned = false
         confidence = 0.0
-        tuningMessage = "请弹奏琴弦"
+        tuningMessage = L("请弹奏琴弦")
     }
     
     // MARK: - Waveform Update

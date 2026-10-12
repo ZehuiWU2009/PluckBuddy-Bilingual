@@ -15,7 +15,7 @@ struct TunerView: View {
             // 顶部说明和波形
             VStack(spacing: 12) {
                 HStack {
-                    Text("请依次调整每根弦")
+                    Text(L("请依次调整每根弦"))
                         .font(.headline)
                         .foregroundStyle(.secondary)
                     
@@ -26,7 +26,7 @@ struct TunerView: View {
                         HStack(spacing: 4) {
                             Image(systemName: viewModel.pipaFilterEnabled ? "waveform.path" : "waveform")
                                 .font(.caption)
-                            Text(viewModel.pipaFilterEnabled ? "琵琶模式" : "通用模式")
+                            Text(viewModel.pipaFilterEnabled ? L("琵琶模式") : L("通用模式"))
                                 .font(.caption)
                         }
                     }
@@ -40,14 +40,14 @@ struct TunerView: View {
                     if viewModel.pipaFilterEnabled {
                         Image(systemName: viewModel.pipaSoundDetected ? "checkmark.circle.fill" : "antenna.radiowaves.left.and.right")
                             .foregroundStyle(viewModel.pipaSoundDetected ? Color.green : Color.gray)
-                        Text(viewModel.pipaSoundDetected ? "已检测到琵琶声" : (viewModel.pipaGateAvailable ? "聆听中…等待琵琶声" : "模型未加载，已降级"))
+                        Text(viewModel.pipaSoundDetected ? L("已检测到琵琶声") : (viewModel.pipaGateAvailable ? L("聆听中…等待琵琶声") : L("模型未加载，已降级")))
                             .font(.caption)
                             .foregroundStyle(viewModel.pipaSoundDetected ? Color.green : (viewModel.pipaGateAvailable ? Color.secondary : Color.orange))
                     } else {
                         // 关掉过滤时给个轻提示，避免用户以为界面挂了
                         Image(systemName: "waveform")
                             .foregroundStyle(.secondary)
-                        Text("通用模式：不区分声音类型")
+                        Text(L("通用模式：不区分声音类型"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -128,7 +128,7 @@ struct TunerView: View {
             }
             .padding()
         }
-        .navigationTitle("智能调音")
+        .navigationTitle(L("智能调音"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.startListening()
@@ -270,7 +270,7 @@ struct StringTuner: View {
     var body: some View {
         VStack(spacing: 12) {
             // 弦序号标签
-            Text("\(stringNumber)弦")
+            Text(L("\(stringNumber)弦"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             
@@ -332,7 +332,7 @@ struct StringTuner: View {
                         .fill(Color.red.opacity(0.1))
                         .frame(width: 50, height: 125)
                         .overlay(alignment: .top) {
-                            Text("高")
+                            Text(L("高"))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .padding(.top, 4)
@@ -365,7 +365,7 @@ struct StringTuner: View {
                         .fill(Color.red.opacity(0.1))
                         .frame(width: 50, height: 125)
                         .overlay(alignment: .bottom) {
-                            Text("低")
+                            Text(L("低"))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .padding(.bottom, 4)

@@ -20,7 +20,7 @@ class RunningViewModel: ObservableObject {
     @Published var currentBPM: Double = 0 // 当前速度
     @Published var stability: Double = 0 // 稳定性 0-1
     @Published var score: Int = 0 // 得分
-    @Published var statusMessage = "准备开始"
+    @Published var statusMessage = L("准备开始")
     @Published var targetBPM: Double = 120 // 目标速度
     @Published var sessionDuration: TimeInterval = 0 // 当前练习时长（秒）
     @Published var targetDuration: TimeInterval = 300 // 目标时长（默认5分钟）
@@ -106,7 +106,7 @@ class RunningViewModel: ObservableObject {
             let hasPermission = await manager.requestMicrophonePermission()
             guard hasPermission else {
                 print("❌ 麦克风权限被拒绝")
-                statusMessage = "需要麦克风权限"
+                statusMessage = L("需要麦克风权限")
                 return
             }
             print("✅ 麦克风权限已授予")
@@ -137,7 +137,7 @@ class RunningViewModel: ObservableObject {
                 print("✅ 音频监听已启动")
                 isRunning = true
                 startTime = Date()
-                statusMessage = "开始弹奏吧！"
+                statusMessage = L("开始弹奏吧！")
                 
                 // ✨ 如果节拍器已启用，自动启动
                 if metronome.isEnabled {
@@ -150,7 +150,7 @@ class RunningViewModel: ObservableObject {
                 
             } catch {
                 print("❌ 音频启动失败: \(error.localizedDescription)")
-                statusMessage = "音频启动失败"
+                statusMessage = L("音频启动失败")
             }
         }
     }
@@ -302,45 +302,45 @@ class RunningViewModel: ObservableObject {
         }
         
         if pluckCount == 0 {
-            statusMessage = "开始弹奏吧！"
+            statusMessage = L("开始弹奏吧！")
             return
         }
         
         // 根据稳定性给出反馈
         if stability > 0.9 {
-            statusMessage = "🎉 节奏非常稳定！"
+            statusMessage = L("🎉 节奏非常稳定！")
         } else if stability > 0.7 {
-            statusMessage = "👍 节奏不错，保持！"
+            statusMessage = L("👍 节奏不错，保持！")
         } else if stability > 0.5 {
-            statusMessage = "💪 继续练习，更稳定一些"
+            statusMessage = L("💪 继续练习，更稳定一些")
         } else {
-            statusMessage = "🎵 试着保持匀速弹奏"
+            statusMessage = L("🎵 试着保持匀速弹奏")
         }
         
         // 速度提示
         let bpmDiff = currentBPM - targetBPM
         if abs(bpmDiff) > 20 {
             if bpmDiff > 0 {
-                statusMessage += " (稍慢一点)"
+                statusMessage += L(" (稍慢一点)")
             } else {
-                statusMessage += " (可以快一点)"
+                statusMessage += L(" (可以快一点)")
             }
         }
     }
     
     private func generateSummary() -> String {
         guard pluckCount > 0 else {
-            return "准备开始"
+            return L("准备开始")
         }
         
         let minutes = Int(sessionDuration / 60)
         let seconds = Int(sessionDuration.truncatingRemainder(dividingBy: 60))
         
-        var summary = "练习结束！\n"
-        summary += "时长: \(minutes):\(String(format: "%02d", seconds))\n"
-        summary += "弹奏: \(pluckCount) 次\n"
-        summary += "距离: \(Int(distance)) 米\n"
-        summary += "得分: \(score)"
+        var summary = L("练习结束！\n")
+        summary += String(format: L("时长: %d:%02d\n"), minutes, seconds)
+        summary += String(format: L("弹奏: %d 次\n"), pluckCount)
+        summary += String(format: L("距离: %d 米\n"), Int(distance))
+        summary += String(format: L("得分: %d"), score)
         
         return summary
     }

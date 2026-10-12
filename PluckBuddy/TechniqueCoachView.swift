@@ -49,35 +49,35 @@ struct TechniqueCoachView: View {
                 displayEvaluation = evaluation
             }
         }
-        .navigationTitle("智能指法教练")
+        .navigationTitle(L("智能指法教练"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     // 技法测试
-                    Section("快速测试技法") {
+                    Section(L("快速测试技法")) {
                         Button {
                             viewModel.setTechnique(.roll)
                         } label: {
-                            Label("轮指", systemImage: "hand.tap.fill")
+                            Label(L("轮指"), systemImage: "hand.tap.fill")
                         }
                         
                         Button {
                             viewModel.setTechnique(.sweep)
                         } label: {
-                            Label("扫弦", systemImage: "waveform.path")
+                            Label(L("扫弦"), systemImage: "waveform.path")
                         }
                         
                         Button {
                             viewModel.setTechnique(.pluck)
                         } label: {
-                            Label("弹挑", systemImage: "hand.point.up.left.fill")
+                            Label(L("弹挑"), systemImage: "hand.point.up.left.fill")
                         }
                         
                         Button {
                             viewModel.setTechnique(.unknown)
                         } label: {
-                            Label("重置", systemImage: "arrow.counterclockwise")
+                            Label(L("重置"), systemImage: "arrow.counterclockwise")
                         }
                     }
                     
@@ -86,7 +86,7 @@ struct TechniqueCoachView: View {
                         NavigationLink {
                             ScrollingTextTestView()
                         } label: {
-                            Label("滚动字幕测试", systemImage: "text.badge.checkmark")
+                            Label(L("滚动字幕测试"), systemImage: "text.badge.checkmark")
                         }
                     }
                 } label: {
@@ -127,15 +127,15 @@ struct TechniqueCoachView: View {
                                 .foregroundStyle(.white.opacity(0.5))
                             
                             if !viewModel.isAnalyzing {
-                                Text("点击开始分析按钮启动摄像头")
+                                Text(L("点击开始分析按钮启动摄像头"))
                                     .font(.system(size: 14))
                                     .foregroundStyle(.white.opacity(0.85))
                             } else if viewModel.handPose == nil {
-                                Text("等待检测手部...")
+                                Text(L("等待检测手部..."))
                                     .font(.system(size: 14))
                                     .foregroundStyle(.white.opacity(0.85))
                             } else {
-                                Text("✅ 手部已检测")
+                                Text(L("✅ 手部已检测"))
                                     .font(.system(size: 14))
                                     .foregroundStyle(.green)
                             }
@@ -169,10 +169,10 @@ struct TechniqueCoachView: View {
                     // 检测信息三行：技法名 / 评分 / 状态
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 4) {
-                            Text("检测到:")
+                            Text(L("检测到:"))
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.7))
-                            Text(displayTechnique.rawValue)
+                            Text(displayTechnique.displayName)
                                 .font(.system(size: 17, weight: .bold))
                                 .foregroundStyle(displayTechnique.color)
                         }
@@ -207,7 +207,7 @@ struct TechniqueCoachView: View {
                         Image(systemName: "lightbulb.fill")
                             .font(.caption)
                             .foregroundStyle(.yellow)
-                        Text("改进建议")
+                        Text(L("改进建议"))
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.white)
@@ -296,7 +296,7 @@ struct TechniqueCoachView: View {
         return EvaluationAspect(
             category: category,
             score: 0,
-            description: "暂无数据"
+            description: L("暂无数据")
         )
     }
     
@@ -315,11 +315,11 @@ struct TechniqueCoachView: View {
             VStack(alignment: .leading, spacing: 4) {
                 // 检测到的技法
                 HStack(spacing: 4) {
-                    Text("检测:")
+                    Text(L("检测:"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     
-                    Text(viewModel.detectedTechnique.rawValue)
+                    Text(viewModel.detectedTechnique.displayName)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(viewModel.detectedTechnique.color)
@@ -363,7 +363,7 @@ struct TechniqueCoachView: View {
                 Image(systemName: "chart.bar.fill")
                     .foregroundStyle(.blue)
                     .font(.caption)
-                Text("详细评估")
+                Text(L("详细评估"))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
@@ -398,7 +398,7 @@ struct TechniqueCoachView: View {
                         Image(systemName: "lightbulb.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption2)
-                        Text("建议")
+                        Text(L("建议"))
                             .font(.caption)
                             .fontWeight(.semibold)
                     }
@@ -428,7 +428,7 @@ struct TechniqueCoachView: View {
                 Image(systemName: viewModel.isAnalyzing ? "stop.fill" : "play.fill")
                     .font(.title3)
                 
-                Text(viewModel.isAnalyzing ? "停止分析" : "开始分析")
+                Text(viewModel.isAnalyzing ? L("停止分析") : L("开始分析"))
                     .font(.title3)
                     .fontWeight(.semibold)
             }
@@ -482,7 +482,7 @@ struct FixedAspectView: View {
         VStack(alignment: .leading, spacing: 3) {
             // 分类名称和分数
             HStack(spacing: 4) {
-                Text(aspect.category.rawValue)
+                Text(aspect.category.displayName)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.white.opacity(0.85))
                 
@@ -563,7 +563,7 @@ struct AspectRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(aspect.category.rawValue)
+                Text(aspect.category.displayName)
                     .font(.caption)
                     .fontWeight(.medium)
                 
@@ -621,7 +621,7 @@ struct CompactAspectView: View {
         VStack(alignment: .leading, spacing: 3) {
             // 分类和分数
             HStack(spacing: 4) {
-                Text(aspect.category.rawValue)
+                Text(aspect.category.displayName)
                     .font(.caption2)
                     .fontWeight(.medium)
                 
@@ -687,7 +687,7 @@ struct RequirementStripView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.yellow)
             
-            Text(items.isEmpty ? "暂无要求" : items[safeIndex])
+            Text(items.isEmpty ? L("暂无要求") : items[safeIndex])
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.white.opacity(0.92))
                 .lineLimit(1)

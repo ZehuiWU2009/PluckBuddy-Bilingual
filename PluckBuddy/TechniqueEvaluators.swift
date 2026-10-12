@@ -19,7 +19,7 @@ class RollPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .rhythm,
             score: sequenceScore,
-            description: sequenceScore >= 80 ? "手指顺序清晰" : "注意手指依次拨弦"
+            description: sequenceScore >= 80 ? L("手指顺序清晰") : L("注意手指依次拨弦")
         ))
         
         // 2. 评估手腕稳定性
@@ -28,7 +28,7 @@ class RollPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .wristPosition,
             score: wristScore,
-            description: wristScore >= 80 ? "手腕稳定" : "手腕晃动过大"
+            description: wristScore >= 80 ? L("手腕稳定") : L("手腕晃动过大")
         ))
         
         // 3. 评估虎口角度（拇指与食指之间的张开程度）
@@ -36,7 +36,7 @@ class RollPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .tigerMouth,
             score: tigerScore,
-            description: tigerScore >= 80 ? "虎口自然张开" : "调整虎口打开程度"
+            description: tigerScore >= 80 ? L("虎口自然张开") : L("调整虎口打开程度")
         ))
         
         // 4. 评估运动流畅度
@@ -44,7 +44,7 @@ class RollPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .relaxation,
             score: smoothScore,
-            description: smoothScore >= 80 ? "动作流畅" : "动作略显僵硬"
+            description: smoothScore >= 80 ? L("动作流畅") : L("动作略显僵硬")
         ))
         
         // 计算总分
@@ -53,19 +53,19 @@ class RollPostureEvaluator {
         // 生成建议
         var suggestions: [String] = []
         if sequenceScore < 80 {
-            suggestions.append("练习手指依次拨弦，保持均匀节奏")
+            suggestions.append(L("练习手指依次拨弦，保持均匀节奏"))
         }
         if wristScore < 80 {
-            suggestions.append("放松手腕，保持稳定姿势")
+            suggestions.append(L("放松手腕，保持稳定姿势"))
         }
         if tigerScore < 80 {
-            suggestions.append("调整虎口打开程度，让拇指与食指自然张开")
+            suggestions.append(L("调整虎口打开程度，让拇指与食指自然张开"))
         }
         if smoothScore < 80 {
-            suggestions.append("放松手部肌肉，让动作更流畅")
+            suggestions.append(L("放松手部肌肉，让动作更流畅"))
         }
         if suggestions.isEmpty {
-            suggestions.append("继续保持，轮指技法很标准！")
+            suggestions.append(L("继续保持，轮指技法很标准！"))
         }
         
         return PostureEvaluation(
@@ -134,7 +134,7 @@ class SweepPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .handShape,
             score: unityScore,
-            description: unityScore >= 80 ? "手指配合协调" : "注意所有手指同时拨弦"
+            description: unityScore >= 80 ? L("手指配合协调") : L("注意所有手指同时拨弦")
         ))
         
         // 2. 评估手臂带动
@@ -143,7 +143,7 @@ class SweepPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .wristPosition,
             score: armScore,
-            description: armScore >= 70 ? "手臂带动充分" : "应由手臂带动，而非单纯手指"
+            description: armScore >= 70 ? L("手臂带动充分") : L("应由手臂带动，而非单纯手指")
         ))
         
         // 3. 评估力度均匀性
@@ -152,7 +152,7 @@ class SweepPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .rhythm,
             score: uniformityScore,
-            description: uniformityScore >= 80 ? "力度均匀" : "注意保持力度一致"
+            description: uniformityScore >= 80 ? L("力度均匀") : L("注意保持力度一致")
         ))
         
         // 计算总分
@@ -161,16 +161,16 @@ class SweepPostureEvaluator {
         // 生成建议
         var suggestions: [String] = []
         if unityScore < 80 {
-            suggestions.append("让所有手指同时接触琴弦")
+            suggestions.append(L("让所有手指同时接触琴弦"))
         }
         if armScore < 70 {
-            suggestions.append("用手臂带动扫弦，而不是单靠手指")
+            suggestions.append(L("用手臂带动扫弦，而不是单靠手指"))
         }
         if uniformityScore < 80 {
-            suggestions.append("保持扫弦力度均匀")
+            suggestions.append(L("保持扫弦力度均匀"))
         }
         if suggestions.isEmpty {
-            suggestions.append("扫弦技法很标准，继续保持！")
+            suggestions.append(L("扫弦技法很标准，继续保持！"))
         }
         
         return PostureEvaluation(
@@ -200,7 +200,7 @@ class PluckPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .handShape,
             score: independenceScore,
-            description: independenceScore >= 80 ? "手指独立性好" : "注意只用指定手指拨弦"
+            description: independenceScore >= 80 ? L("手指独立性好") : L("注意只用指定手指拨弦")
         ))
         
         // 2. 评估拨弦力度（活跃手指的速度）
@@ -209,7 +209,7 @@ class PluckPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .handShape,
             score: strengthScore,
-            description: strengthScore >= 70 ? "拨弦力度适中" : strengthScore >= 50 ? "力度偏弱" : "力度过弱"
+            description: strengthScore >= 70 ? L("拨弦力度适中") : strengthScore >= 50 ? L("力度偏弱") : L("力度过弱")
         ))
         
         // 3. 评估手腕稳定性
@@ -218,7 +218,7 @@ class PluckPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .wristPosition,
             score: stabilityScore,
-            description: stabilityScore >= 80 ? "手腕稳定" : "手腕晃动，应保持稳定"
+            description: stabilityScore >= 80 ? L("手腕稳定") : L("手腕晃动，应保持稳定")
         ))
         
         // 4. 评估节奏稳定性
@@ -226,7 +226,7 @@ class PluckPostureEvaluator {
         aspects.append(EvaluationAspect(
             category: .rhythm,
             score: rhythmScore,
-            description: rhythmScore >= 80 ? "节奏稳定" : "注意保持节奏均匀"
+            description: rhythmScore >= 80 ? L("节奏稳定") : L("注意保持节奏均匀")
         ))
         
         // 计算总分
@@ -235,19 +235,19 @@ class PluckPostureEvaluator {
         // 生成建议
         var suggestions: [String] = []
         if independenceScore < 80 {
-            suggestions.append("集中使用一根手指，避免其他手指参与")
+            suggestions.append(L("集中使用一根手指，避免其他手指参与"))
         }
         if strengthScore < 70 {
-            suggestions.append("增加拨弦力度，但不要过于用力")
+            suggestions.append(L("增加拨弦力度，但不要过于用力"))
         }
         if stabilityScore < 80 {
-            suggestions.append("保持手腕稳定，动作主要来自手指")
+            suggestions.append(L("保持手腕稳定，动作主要来自手指"))
         }
         if rhythmScore < 80 {
-            suggestions.append("匀速弹挑，保持节奏感")
+            suggestions.append(L("匀速弹挑，保持节奏感"))
         }
         if suggestions.isEmpty {
-            suggestions.append("弹挑技法很规范，继续保持！")
+            suggestions.append(L("弹挑技法很规范，继续保持！"))
         }
         
         return PostureEvaluation(

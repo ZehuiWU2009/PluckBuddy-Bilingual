@@ -17,6 +17,9 @@ enum MetronomeSoundType: String, CaseIterable, Identifiable {
     case drum = "鼓声"
     
     var id: String { rawValue }
+
+    /// 本地化显示名（rawValue 仍作持久化 key，不能改）
+    var displayName: String { L(rawValue) }
     
     var icon: String {
         switch self {

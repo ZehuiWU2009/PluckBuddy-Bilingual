@@ -27,9 +27,9 @@ struct ResultView: View {
     var body: some View {
         VStack(spacing: 0) {
             // 标签切换
-            Picker("统计类型", selection: $selectedTab) {
+            Picker(L("统计类型"), selection: $selectedTab) {
                 ForEach(StatTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
+                    Text(L(tab.rawValue)).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
@@ -47,7 +47,7 @@ struct ResultView: View {
                 }
             }
         }
-        .navigationTitle("我的成绩")
+        .navigationTitle(L("我的成绩"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             dataManager.updateStatistics()
@@ -64,15 +64,15 @@ struct OverviewSection: View {
             // 总览卡片
             HStack(spacing: 16) {
                 StatCard(
-                    title: "总练习",
+                    title: L("总练习"),
                     value: "\(dataManager.totalSessions)",
-                    unit: "次",
+                    unit: L("次"),
                     icon: "list.bullet",
                     color: .blue
                 )
                 
                 StatCard(
-                    title: "总时长",
+                    title: L("总时长"),
                     value: formatDuration(dataManager.totalDuration),
                     unit: "",
                     icon: "clock",
@@ -83,17 +83,17 @@ struct OverviewSection: View {
             
             HStack(spacing: 16) {
                 StatCard(
-                    title: "总得分",
+                    title: L("总得分"),
                     value: "\(dataManager.totalScore)",
-                    unit: "分",
+                    unit: L("分"),
                     icon: "star.fill",
                     color: .orange
                 )
                 
                 StatCard(
-                    title: "连续天数",
+                    title: L("连续天数"),
                     value: "\(dataManager.currentStreak)",
-                    unit: "天",
+                    unit: L("天"),
                     icon: "flame.fill",
                     color: .red
                 )
@@ -102,7 +102,7 @@ struct OverviewSection: View {
             
             // 7 天趋势图
             VStack(alignment: .leading, spacing: 12) {
-                Text("最近 7 天练习")
+                Text(L("最近 7 天练习"))
                     .font(.headline)
                     .padding(.horizontal)
                 
@@ -111,7 +111,7 @@ struct OverviewSection: View {
                         .frame(height: 200)
                         .padding()
                 } else {
-                    Text("需要 iOS 16+ 才能显示图表")
+                    Text(L("需要 iOS 16+ 才能显示图表"))
                         .foregroundStyle(.secondary)
                         .frame(height: 200)
                 }
@@ -132,7 +132,7 @@ struct OverviewSection: View {
         if hours > 0 {
             return "\(hours)h\(minutes)m"
         } else {
-            return "\(minutes)分钟"
+            return "\(minutes)\(L("分钟"))"
         }
     }
 }
@@ -148,9 +148,9 @@ struct HistorySection: View {
                     Image(systemName: "tray")
                         .font(.system(size: 60))
                         .foregroundStyle(.secondary)
-                    Text("还没有练习记录")
+                    Text(L("还没有练习记录"))
                         .foregroundStyle(.secondary)
-                    Text("开始您的第一次练习吧！")
+                    Text(L("开始您的第一次练习吧！"))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -174,48 +174,48 @@ struct AchievementsSection: View {
         VStack(spacing: 16) {
             // 成就列表
             AchievementCard(
-                title: "初学者",
-                description: "完成第一次练习",
+                title: L("初学者"),
+                description: L("完成第一次练习"),
                 icon: "🎯",
                 isUnlocked: dataManager.totalSessions >= 1,
                 progress: min(1.0, Double(dataManager.totalSessions))
             )
             
             AchievementCard(
-                title: "勤奋练习",
-                description: "累计练习 10 次",
+                title: L("勤奋练习"),
+                description: L("累计练习 10 次"),
                 icon: "💪",
                 isUnlocked: dataManager.totalSessions >= 10,
                 progress: min(1.0, Double(dataManager.totalSessions) / 10.0)
             )
             
             AchievementCard(
-                title: "坚持不懈",
-                description: "连续练习 7 天",
+                title: L("坚持不懈"),
+                description: L("连续练习 7 天"),
                 icon: "🔥",
                 isUnlocked: dataManager.currentStreak >= 7,
                 progress: min(1.0, Double(dataManager.currentStreak) / 7.0)
             )
             
             AchievementCard(
-                title: "时间大师",
-                description: "累计练习 1 小时",
+                title: L("时间大师"),
+                description: L("累计练习 1 小时"),
                 icon: "⏰",
                 isUnlocked: dataManager.totalDuration >= 3600,
                 progress: min(1.0, dataManager.totalDuration / 3600.0)
             )
             
             AchievementCard(
-                title: "高分选手",
-                description: "累计得分达到 1000",
+                title: L("高分选手"),
+                description: L("累计得分达到 1000"),
                 icon: "⭐",
                 isUnlocked: dataManager.totalScore >= 1000,
                 progress: min(1.0, Double(dataManager.totalScore) / 1000.0)
             )
             
             AchievementCard(
-                title: "全能选手",
-                description: "尝试所有练习模式",
+                title: L("全能选手"),
+                description: L("尝试所有练习模式"),
                 icon: "🏆",
                 isUnlocked: checkAllModes(),
                 progress: Double(getUniqueModes()) / 4.0
@@ -291,7 +291,7 @@ struct SessionRow: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 4) {
-                Text("\(session.score) 分")
+                Text("\(session.score) " + L("分"))
                     .font(.subheadline.bold())
                     .foregroundStyle(.blue)
                 Text(session.formattedDuration)
@@ -359,8 +359,8 @@ struct DailyPracticeChart: View {
         Chart {
             ForEach(stats) { stat in
                 BarMark(
-                    x: .value("日期", stat.weekday),
-                    y: .value("时长", stat.totalDuration / 60)
+                    x: .value(L("日期"), stat.weekday),
+                    y: .value(L("时长"), stat.totalDuration / 60)
                 )
                 .foregroundStyle(.blue.gradient)
                 .annotation(position: .top) {
@@ -376,7 +376,7 @@ struct DailyPracticeChart: View {
             AxisMarks(position: .leading) { value in
                 AxisValueLabel {
                     if let minutes = value.as(Double.self) {
-                        Text("\(Int(minutes))分")
+                        Text("\(Int(minutes))" + L("分"))
                             .font(.caption2)
                     }
                 }
@@ -391,4 +391,3 @@ struct DailyPracticeChart: View {
             .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
     }
 }
-

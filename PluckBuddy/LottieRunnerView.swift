@@ -47,7 +47,7 @@ struct LottieRunnerView: View {
                         .offset(y: isRunning ? sin(animationPhase * .pi * 2) * 5 : 0)
                     
                     // 提示信息
-                    Text(isRunning ? "运行中..." : "等待中...")
+                    Text(isRunning ? L("运行中...") : L("等待中..."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

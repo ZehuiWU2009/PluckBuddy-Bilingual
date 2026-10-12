@@ -30,7 +30,7 @@ class TechniqueCoachViewModel: ObservableObject {
     @Published var currentEvaluation: PostureEvaluation?
     
     /// 状态消息
-    @Published var statusMessage = "准备开始"
+    @Published var statusMessage = L("准备开始")
     
     /// 摄像头权限状态
     @Published var cameraPermissionGranted = false
@@ -98,7 +98,7 @@ class TechniqueCoachViewModel: ObservableObject {
         let authorized = await requestCameraPermission()
         guard authorized else {
             print("❌ 摄像头权限被拒绝")
-            statusMessage = "需要摄像头权限"
+            statusMessage = L("需要摄像头权限")
             return
         }
         
@@ -120,7 +120,7 @@ class TechniqueCoachViewModel: ObservableObject {
             
             isAnalyzing = true
             startTime = Date()
-            statusMessage = "请开始弹奏"
+            statusMessage = L("请开始弹奏")
             
             // 启动时长计时器
             startDurationTimer()
@@ -135,7 +135,7 @@ class TechniqueCoachViewModel: ObservableObject {
             
         } catch {
             print("❌ 启动捕获失败: \(error.localizedDescription)")
-            statusMessage = "摄像头启动失败"
+            statusMessage = L("摄像头启动失败")
         }
     }
     
@@ -163,7 +163,7 @@ class TechniqueCoachViewModel: ObservableObject {
         detectedTechnique = .unknown
         handPose = nil
         currentEvaluation = nil
-        statusMessage = "分析已停止"
+        statusMessage = L("分析已停止")
         
         // 重置技法去抖计数，下次开始时重新累积
         pendingTechnique = .unknown
@@ -181,7 +181,7 @@ class TechniqueCoachViewModel: ObservableObject {
                 // 如果之前检测到技法，现在丢失了
                 print("⚠️ 手部检测丢失")
             }
-            statusMessage = "未检测到手部"
+            statusMessage = L("未检测到手部")
             skeletonOverlayImage = nil  // 清空骨骼图像
             return
         }
@@ -205,7 +205,7 @@ class TechniqueCoachViewModel: ObservableObject {
                 detectedTechnique = .unknown
             }
             currentEvaluation = nil
-            statusMessage = "未听到琵琶声（\(soundSceneLabel)）"
+            statusMessage = L("未听到琵琶声（") + L(soundSceneLabel) + L("）")
             return
         }
         
@@ -422,7 +422,7 @@ class TechniqueCoachViewModel: ObservableObject {
             return PostureEvaluation(
                 overallScore: 0,
                 aspects: [],
-                suggestions: ["请开始弹奏"]
+                suggestions: [L("请开始弹奏")]
             )
         }
     }
@@ -431,22 +431,22 @@ class TechniqueCoachViewModel: ObservableObject {
     
     private func updateStatusMessage() {
         guard let evaluation = currentEvaluation else {
-            statusMessage = "分析中..."
+            statusMessage = L("分析中...")
             return
         }
         
         let score = evaluation.overallScore
         
         if score >= 90 {
-            statusMessage = "🌟 姿势优秀！"
+            statusMessage = L("🌟 姿势优秀！")
         } else if score >= 80 {
-            statusMessage = "👍 姿势良好！"
+            statusMessage = L("👍 姿势良好！")
         } else if score >= 70 {
-            statusMessage = "👌 继续保持！"
+            statusMessage = L("👌 继续保持！")
         } else if score >= 60 {
-            statusMessage = "💪 注意调整姿势"
+            statusMessage = L("💪 注意调整姿势")
         } else {
-            statusMessage = "⚠️ 需要改进姿势"
+            statusMessage = L("⚠️ 需要改进姿势")
         }
     }
     
@@ -491,20 +491,20 @@ class TechniqueCoachViewModel: ObservableObject {
                         EvaluationAspect(
                             category: .handShape,
                             score: 90,
-                            description: "手型自然"
+                            description: L("手型自然")
                         ),
                         EvaluationAspect(
                             category: .tigerMouth,
                             score: 80,
-                            description: "虎口自然"
+                            description: L("虎口自然")
                         ),
                         EvaluationAspect(
                             category: .rhythm,
                             score: 85,
-                            description: "节奏稳定"
+                            description: L("节奏稳定")
                         )
                     ],
-                    suggestions: ["保持当前节奏", "注意手指独立性"]
+                    suggestions: [L("保持当前节奏"), L("注意手指独立性")]
                 )
                 
                 updateStatusMessage()
@@ -538,21 +538,21 @@ class TechniqueCoachViewModel: ObservableObject {
                     EvaluationAspect(
                         category: .handShape,
                         score: score + 5,
-                        description: "手型\(score > 80 ? "优秀" : "良好")"
+                        description: L("手型") + (score > 80 ? L("优秀") : L("良好"))
                     ),
                     EvaluationAspect(
                         category: .rhythm,
                         score: score,
-                        description: "节奏\(score > 80 ? "稳定" : "一般")"
+                        description: L("节奏") + (score > 80 ? L("稳定") : L("一般"))
                     )
                 ],
-                suggestions: ["继续保持"]
+                suggestions: [L("继续保持")]
             )
             
             updateStatusMessage()
         } else {
             currentEvaluation = nil
-            statusMessage = "请开始弹奏"
+            statusMessage = L("请开始弹奏")
         }
     }
     
@@ -659,11 +659,15 @@ struct PostureEvaluation {
 
 struct EvaluationAspect {
     enum Category: String {
+        // rawValue 只能是字面量，保持中文原文；界面展示统一走 displayName
         case handShape = "手型"
         case tigerMouth = "虎口角度"
         case wristPosition = "手腕位置"
         case rhythm = "节奏稳定性"
         case relaxation = "放松程度"
+
+        /// 本地化显示名（中文原文即英文表的 key）
+        var displayName: String { L(rawValue) }
     }
     
     let category: Category

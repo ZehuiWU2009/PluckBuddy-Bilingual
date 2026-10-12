@@ -40,10 +40,10 @@ struct RankingListView: View {
     }
     
     private var modePicker: some View {
-        Picker("练习模式", selection: $selectedMode) {
-            Text("弹挑跑步").tag(PracticeMode.running)
-            Text("轮指花开").tag(PracticeMode.flower)
-            Text("扫弦水波").tag(PracticeMode.wave)
+        Picker(L("练习模式"), selection: $selectedMode) {
+            Text(L("弹挑跑步")).tag(PracticeMode.running)
+            Text(L("轮指花开")).tag(PracticeMode.flower)
+            Text(L("扫弦水波")).tag(PracticeMode.wave)
         }
         .pickerStyle(.segmented)
         .padding()
@@ -53,7 +53,7 @@ struct RankingListView: View {
         HStack {
             Image(systemName: "wifi.slash")
                 .foregroundColor(.orange)
-            Text("离线模拟数据 · 仅供演示")
+            Text(L("离线模拟数据 · 仅供演示"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -130,7 +130,7 @@ struct TopPlayerCard: View {
                 .font(.system(size: rank == 1 ? 24 : 20, weight: .bold))
                 .foregroundColor(.blue)
             
-            Text("分")
+            Text(L("分"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -175,7 +175,7 @@ struct RankingRow: View {
                         .font(.system(size: 16, weight: .semibold))
                     
                     if isCurrentUser {
-                        Text("(我)")
+                        Text(L("(我)"))
                             .font(.caption)
                             .foregroundColor(.blue)
                             .padding(.horizontal, 6)
@@ -185,7 +185,7 @@ struct RankingRow: View {
                     }
                 }
                 
-                Text("练习 \(player.practiceCount) 次")
+                Text(L("练习") + " \(player.practiceCount) " + L("次"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -197,7 +197,7 @@ struct RankingRow: View {
                 Text("\(player.score)")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.blue)
-                Text("分")
+                Text(L("分"))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }

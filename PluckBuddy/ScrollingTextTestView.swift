@@ -18,14 +18,14 @@ struct ScrollingTextTestView: View {
             VStack(spacing: 30) {
                 // 技法选择器
                 VStack(spacing: 12) {
-                    Text("选择技法查看要求")
+                    Text(L("选择技法查看要求"))
                         .font(.headline)
                         .foregroundStyle(.white)
                     
-                    Picker("技法", selection: $selectedTechnique) {
-                        Text("🎵 轮指").tag(TechniqueType.roll)
-                        Text("🌊 扫弦").tag(TechniqueType.sweep)
-                        Text("🎸 弹挑").tag(TechniqueType.pluck)
+                    Picker(L("技法"), selection: $selectedTechnique) {
+                        Text(L("🎵 轮指")).tag(TechniqueType.roll)
+                        Text(L("🌊 扫弦")).tag(TechniqueType.sweep)
+                        Text(L("🎸 弹挑")).tag(TechniqueType.pluck)
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
@@ -39,7 +39,7 @@ struct ScrollingTextTestView: View {
                         .font(.system(size: 80))
                         .foregroundStyle(selectedTechnique.color)
                     
-                    Text(selectedTechnique.rawValue)
+                    Text(selectedTechnique.displayName)
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundStyle(.white)
@@ -56,7 +56,7 @@ struct ScrollingTextTestView: View {
                     HStack {
                         Image(systemName: "lightbulb.fill")
                             .foregroundStyle(.yellow)
-                        Text("核心要求 - 简洁滚动条")
+                        Text(L("核心要求 - 简洁滚动条"))
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.white)
@@ -79,7 +79,7 @@ struct ScrollingTextTestView: View {
                 
                 // 卡片轮播（备选方案）
                 VStack(spacing: 8) {
-                    Text("备选方案 - 卡片轮播")
+                    Text(L("备选方案 - 卡片轮播"))
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.7))
                     
@@ -91,12 +91,12 @@ struct ScrollingTextTestView: View {
                 
                 // 说明文字
                 VStack(spacing: 8) {
-                    Text("💡 提示")
+                    Text(L("💡 提示"))
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.yellow)
                     
-                    Text("切换上方选择器查看不同技法的核心要求")
+                    Text(L("切换上方选择器查看不同技法的核心要求"))
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.6))
                         .multilineTextAlignment(.center)
@@ -105,7 +105,7 @@ struct ScrollingTextTestView: View {
             }
             .padding(.top, 20)
         }
-        .navigationTitle("滚动字幕测试")
+        .navigationTitle(L("滚动字幕测试"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
