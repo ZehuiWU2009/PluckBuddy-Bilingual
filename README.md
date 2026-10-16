@@ -1,13 +1,270 @@
+# 弹拨搭子 — AI 琵琶陪练　／　PluckBuddy — AI Pipa Practice Companion
+
+> 本 README 英文在前、中文在后。
+> This README is in English first, then Chinese.
+
+---
+
+# PluckBuddy — AI Pipa Practice Companion
+
+An intelligent Pipa practice companion iOS app built on on-device CoreML. The camera recognizes hand shape and the microphone recognizes sound, delivering real-time fingering scores, tuning assistance and metronome accompaniment, so that learners can develop a standard tone and rhythm at home.
+
+> Competition entry · Mobile App Innovation Contest (Primary & Secondary School Division) · Launch Track
+>
+> Developer: Zehui Wu (吴泽荟)
+> School: Cogdel Cranleigh High School Wuhan (武汉康礼高级中学)
+
+## Technical Contributions of This Project
+
+The project makes technical innovations and engineering trade-offs in the following five directions.
+
+### Contribution 1 · Audio-Video Multimodal Fusion for Fingering Detection
+
+PluckBuddy fuses three signals — Vision hand landmarks, an FFT spectrum and a CoreML classifier — to decide among four fingering types: Pluck, Tremolo, Sweep and Long Tone.
+
+- **Audio side**: the Accelerate framework performs a 4096-point FFT to estimate pitch and rhythm in real time; at the same time the 48 kHz hardware buffer is linearly interpolated and downsampled to 16 kHz and fed to the CoreML classifier as the gate that decides "is this a Pipa"
+- **Video side**: Vision tracks 21 hand landmarks; after Kalman-filter smoothing it computes the tiger-mouth angle and wrist height as the geometric features for technique decisions
+- **Fusion strategy**: audio decides "is this a Pipa sound" (ruling out speech / ambient noise); video decides "is the hand shape correct"; only when both pass does the pipeline enter technique classification, avoiding single-modality misjudgment
+
+### Contribution 2 · On-Device Self-Trained CoreML Pipa Sound Classifier
+
+A self-trained four-class model is built in: `PipaSoundClassifier.mlmodel`. Its input is Float32 `audioSamples`, 15600 frames long, which is about a 0.975-second window at 16 kHz, and it outputs four class probabilities:
+
+| Class             | Meaning        |
+| ----------------- | -------------- |
+| `pipa`            | Pipa sound     |
+| `other_instrument`| Other instrument |
+| `speech`          | Human speech   |
+| `background`      | Background noise |
+
+- **On-device inference**: runs on the iPhone Neural Engine via `MLModel.prediction`; a single inference takes under 80 ms
+- **Zero network dependency**: the whole inference is completed locally; no audio clip is ever uploaded
+- **Precision optimization at the engineering layer**: the model itself is untouched. The threshold is 0.35 with a 2-frame moving average, plus energy gating that classifies low-RMS frames as background, and the inference step is 8000 frames instead of 15600 so consecutive windows overlap
+
+### Contribution 3 · Real-Time Algorithms: 4096-Point FFT + Kalman Filtering
+
+- **FFT spectrum analysis**: `DSPFeatureExtractor.swift` uses `vDSP_fft_zrip` (Accelerate-accelerated) to perform a 4096-point FFT and computes RMS, harmonic ratio, spectral centroid, zero-crossing rate and other indicators, which serve as the input features for pitch detection and the classifier
+- **Kalman filter smoothing**: the 21 landmarks obtained by `HandPoseExtractor` jitter on every frame, and using them directly introduces noise; after Kalman-filter smoothing, the tiger-mouth angle and wrist height are computed, giving a stable output of the tiger-mouth opening in degrees
+- **Parallel processing**: the microphone 4096-frame buffer and camera frames are captured on two independent threads without blocking each other; CoreML inference runs on the `inferenceQueue` serial queue and does not contend with the audio main thread
+
+### Contribution 4 · Unified Audio Pipeline + Model Gating Architecture
+
+On iOS, several modules all want the microphone, but the AVAudioEngine tap can only be installed by one processor — concurrent access from multiple modules conflicts directly. PluckBuddy's solution:
+
+```
+┌──────────────────────────────────────────────────┐
+│ AudioManager (singleton)                         │
+│ ├── AVAudioEngine                                │
+│ ├── 4096-frame tap                              │
+│ └── startListening { buffer in                   │
+│     ├─→ Smart Tuner: PipaSoundGate (gate)        │
+│     │   + PitchDetector                          │
+│     ├─→ Pluck Run: RhythmDetector                │
+│     ├─→ Tremolo Bloom: RollDetector              │
+│     └─→ Sweep Wave: SweepDetector                │
+│    }                                             │
+└──────────────────────────────────────────────────┘
+```
+
+- A single AVAudioEngine and a single tap; all modules that need audio share one buffer callback
+- `PipaSoundGate` loads `PipaSoundClassifier.mlmodel` independently and **does not take over the AVAudioEngine tap** — it only takes over "downsampling + model inference", avoiding resource contention with the Fingering Coach's Engine
+
+### Contribution 5 · Fully Offline On-Device Five-Layer Architecture
+
+See the next section, System Architecture, for the detailed diagram. Core innovations:
+
+- The five layers, from bottom to top, are audio/video capture, signal processing, model inference, metric evaluation, and interaction and presentation. Each has a single responsibility and stays decoupled from the rest
+- Capture, feature extraction, inference and evaluation each run on their own queue; the main thread only refreshes the UI
+- Practice recordings, scores and leaderboards are all written to local CoreData. Nothing is uploaded and nothing is downloaded
+
+## System Architecture
+
+It adopts a fully offline on-device five-layer architecture: everything from raw microphone / camera data to UI feedback is completed on the iPhone, with no network dependency whatsoever.
+
+How each layer maps to the code is shown below.
+
+```mermaid
+flowchart TB
+    subgraph L1 ["Layer 1 · Audio/Video Capture"]
+        A1["AVAudioEngine microphone tap<br/>Hardware 48 kHz, 4096 frames / frame"]
+        A2["AVCaptureSession camera<br/>Vision 21 hand landmarks"]
+    end
+    subgraph L2 ["Layer 2 · Signal Processing"]
+        B1["FFT spectrum + harmonic ratio + spectral centroid<br/>(DSPFeatureExtractor)"]
+        B2["48 kHz → 16 kHz linear interpolation downsampling<br/>Mono mixing"]
+    end
+    subgraph L3 ["Layer 3 · Model Inference (CoreML)"]
+        C1["PipaSoundClassifier<br/>Four classes: Pipa / other instrument / speech / background<br/>Input: 15600 frames @ 16 kHz sliding window"]
+    end
+    subgraph L4 ["Layer 4 · Metric Evaluation"]
+        D1["Pitch detection (PitchDetector)"]
+        D2["Beat / tremolo / sweep detectors"]
+        D3["Technique classification (TechniqueEvaluators)<br/>Pluck / Tremolo / Sweep / Long Tone / Noise"]
+    end
+    subgraph L5 ["Layer 5 · Interaction & Presentation"]
+        E1["SwiftUI view layer<br/>Real-time waveform + score card + quantitative metrics"]
+        E2["Lottie animations<br/>Track character / petal bloom / water ripple"]
+    end
+
+    L1 --> L2 --> L3 --> L4 --> L5
+
+    %% Horizontal details
+    A1 --> B2 --> C1 --> D1
+    A2 --> D3
+    D1 --> E1
+    D2 --> E2
+    D3 --> E1
+```
+
+**Responsibilities of the Five Layers**
+
+| Layer                       | Input                                | Output                                    | Key files                                                                                                                        |
+| --------------------------- | ------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1 · Audio/Video Capture     | The user playing in front of iPhone   | Raw PCM stream / camera frames             | `AudioManager.swift`, `CameraManager.swift`                                                                                       |
+| 2 · Signal Processing       | Raw PCM                              | Spectral features / 16 kHz normalized samples | `DSPFeatureExtractor.swift`, `PipaSoundGate.swift` (downsampling)                                                             |
+| 3 · Model Inference         | 15600 normalized frames             | 4-class probability distribution           | `PipaSoundClassifier.mlmodel`, `PipaSoundGate.swift` (inference)                                                                 |
+| 4 · Metric Evaluation       | Spectral features + video landmarks  | Pitch / beat / technique decisions          | `PitchDetector.swift`, `RhythmDetector.swift`, `RollDetector.swift`, `SweepDetector.swift`, `TechniqueEvaluators.swift`          |
+| 5 · Interaction & Presentation | Metric data                        | User-visible UI and animations              | 7 `*View.swift` files + `Animations/*.json`                                                                                       |
+
+**Why It Is Layered This Way**
+
+- Layer 1 focuses on capture: all I/O sits in one place, so multiple modules never fight over the AVAudioEngine tap
+- Layer 2 normalizes formats: it converts the hardware 48 kHz into the 16 kHz 15600-frame window the model needs, so downstream components can be fed data without caring where it came from
+- Layer 3 runs CoreML inference: under 80 ms per pass, fully offline
+- Layer 4 holds the domain logic of playing: 5 detectors each cover one dimension and can be tested on their own
+- Layer 5 only renders: SwiftUI subscribes to the ViewModel Published state and does no computation
+
+## Core Features
+
+| Module                    | Description                                                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Smart Fingering Coach** | Recognizes left/right hand shapes in real time with the camera (Vision framework), matches the 5 core Pipa techniques (Pluck / Tremolo / Sweep / Long Tone / Noise), and produces frame-stable technique scores plus a rotating carousel of core requirements |
+| **Smart Tuner**           | The microphone captures the open-string sound of the Pipa; a self-developed FFT algorithm reports the current pitch and its cents deviation from the twelve-tone equal temperament standard. A CoreML classifier is wired in as gating: "decide Pipa sound first → then decide pitch" |
+| **Pluck Run**             | Gamified beat-track accompaniment. Each completed Pluck moves the character one cell forward on the track; it also tracks beat stability, BPM and the total score              |
+| **Tremolo Bloom**         | Tremolo training visualized as a growing flower. It detects the evenness of consecutive fast plucks, and petals bloom after one round is completed                            |
+| **Sweep Wave**            | Sweep training visualized as water ripples. It distinguishes up-sweep / down-sweep and generates a ripple animation in the corresponding direction                            |
+| **Metronome**             | Independently adjustable BPM metronome, adapted to different practice scenarios                                                                                              |
+| **Social Hub**            | Offline leaderboard / achievements / friend PK (local persistence, for demo purposes)                                                                                        |
+| **Welcome Screen**        | Off-white background + Logo + "Let's practice 5 minutes today too" + 3-second countdown auto-dismiss + "Skip" in the top-right corner                                        |
+
+## Tech Stack
+
+- The app is written in Swift 6, with SwiftUI for the interface, Combine for state binding, and Swift Concurrency in strict mode
+- It runs on arm64 devices with iOS 17.6 or later, and the camera and microphone features must be demonstrated on a real device
+- On the algorithm side, vDSP from the Accelerate framework does the FFT, AVAudioEngine handles microphone capture, and Vision extracts hand landmarks
+- The acoustic model is the self-trained CoreML classifier PipaSoundClassifier, which separates Pipa, other instruments, speech and background noise, entirely offline
+- Audio capture goes through the custom AudioManager, which installs one tap of 4096 frames per buffer and then linearly interpolates the hardware 48 kHz down to 16 kHz
+- Hand shape comes from HandPoseExtractor, which returns 21 landmarks per hand, from which the tiger-mouth angle and wrist height are computed
+- Lottie drives the sweep water-ripple and track-character animations, and CoreData keeps practice records, leaderboards and achievements on the device
+
+## Project Structure
+
+```
+PluckBuddy/
+├── PluckBuddy.xcodeproj/        # Xcode project
+├── PluckBuddy/                  # Main target source
+│   ├── PluckBuddyApp.swift       # App entry (welcome/home switching)
+│   ├── WelcomeView.swift         # Launch welcome page (3-second countdown fade-out)
+│   ├── HomeView.swift            # Home page (entries to the seven modules)
+│   ├── TechniqueCoachView*.swift # Smart Fingering Coach UI + ViewModel
+│   ├── TunerView*.swift          # Smart Tuner UI + ViewModel
+│   ├── RunningViewModel.swift    # Pluck Run ViewModel
+│   ├── FlowerPracticeView.swift  # Tremolo Bloom UI
+│   ├── FlowerViewModel.swift     # Tremolo Bloom ViewModel
+│   ├── WavePracticeView.swift    # Sweep Wave UI
+│   ├── WaveViewModel.swift       # Sweep Wave ViewModel
+│   ├── MetronomeView.swift       # Metronome UI
+│   ├── MetronomeManager.swift    # Metronome scheduling
+│   ├── FriendPKView.swift        # Social Hub UI
+│   ├── AchievementView.swift     # Achievements UI
+│   ├── Persistence.swift         # CoreData persistence
+│   ├── AudioManager.swift        # Unified audio capture
+│   ├── PipaSoundClassifier.mlmodel  # On-device four-class CoreML model
+│   ├── PipaSoundGate.swift       # Tuner-only Pipa-sound gate (loads the model independently to avoid fighting with the Fingering Coach over the AVAudioEngine tap)
+│   ├── CameraManager.swift       # Camera capture (new rotation API)
+│   ├── HandPoseExtractor.swift   # Vision hand shape extraction
+│   ├── DSPFeatureExtractor.swift # Self-developed FFT spectral features
+│   ├── PitchDetector.swift       # Pitch detection
+│   ├── RhythmDetector.swift      # Pluck beat detection
+│   ├── RollDetector.swift        # Tremolo detection
+│   ├── SweepDetector.swift       # Sweep detection
+│   ├── Animations/               # Lottie animation JSON
+│   └── Assets.xcassets/          # Assets (Logo, etc.)
+└── PluckBuddyTests/              # Unit test target
+```
+
+## How to Run
+
+1. **Open** `PluckBuddy.xcodeproj` **with Xcode 17+ on a Mac**
+2. Select the project on the left → TARGETS `PluckBuddy` → **Signing & Capabilities**
+   - **Team**: choose your own Apple ID (a free account is enough)
+   - **Bundle Identifier**: change it to one that is not registered under your account, e.g. `com.yourname.pluckbuddy`. The bilingual edition uses the bundle id `com.zehuiwu.pluckbuddy.bilingual` so that it differs from the Chinese edition (弹拨搭子) and the international edition (PluckBuddy); all three can be installed on the same iPhone at the same time
+3. Connect a real device → pick iPhone in the device bar at the top → `Cmd+R`
+4. **Real-device system requirement**: iOS 17.6 or later
+5. **First time on a real device**: Settings → Privacy & Security → Developer Mode → turn it on and restart; when the app launches and reports "Untrusted Developer", go to Settings → General → VPN & Device Management → trust your Apple ID
+6. **Camera / microphone modules** (Fingering Coach / Smart Tuner / the three companions) **must run on a real device**; the Simulator has no camera or microphone
+
+The provisioning profile of a free Apple ID expires after 7 days; when it expires, reconnect to Xcode and re-sign to install again.
+
+## Version History
+
+From the first runnable build to the submitted version, the project went through four rounds of iteration, each driven by problems exposed by on-device testing. Step-by-step changes are recorded in the repository commit history.
+
+### v1.0 · First complete edition (2026-09-29)
+
+- All seven modules completed: Smart Fingering Coach, Smart Tuner, Pluck Run, Tremolo Bloom, Sweep Wave, Metronome and Social Hub
+- Both audio and video pipelines working; the on-device CoreML four-class model is wired into the Fingering Coach
+- 52 Swift files, about 13,700 lines
+
+### v1.1 · Tuner gating and classifier precision (2026-09-30)
+
+- The Tuner gains an on-device Pipa-sound gate with the new `PipaSoundGate.swift`. It does not take over the AVAudioEngine tap; it only handles downsampling and inference, while `AudioManager` still dispatches the microphone data, avoiding contention with the Fingering Coach and the three companions
+- Gating rule: pitch calculation starts only when a Pipa sound is detected within the last 0.5 s; other frames show "Listening… waiting for Pipa"
+- Engineering-layer classifier precision tuning: on-device tests showed Pipa probability mostly between 0.3 and 0.7, so the threshold dropped from 0.5 to 0.35, the moving-average window from 3 to 2 frames, an energy gate classifies frames with RMS below 0.01 as background noise, and the inference step changed from 15600 to 8000 frames for roughly 50% overlap
+- Welcome screen changed to fade out before removal with an `isDismissing` guard, removing the race between the countdown hitting zero and the Skip button
+
+### v1.2 · Hand metric and sample-rate convention (2026-10-01)
+
+- Hand skeleton upgraded from a 6-point simplified drawing to the full 21-point skeleton: 5 fingertips as colored large dots, wrist as a blue dot, 15 mid joints as semi-transparent white small dots, plus 5 finger-bone lines and 5 palm lines
+- Hand-score metric changed from finger angle to tiger-mouth angle: with the wrist as the vertex, the angle between the thumb direction and the index-finger direction. 30–50° scores full marks; too small means thumb and index are too close, too large means the tiger mouth is stretched too wide
+- Sample rate unified to the real-device measured 48 kHz. Default values in the four detectors and four ViewModels changed from 44100 to 48000, eliminating the previous pitch-low-by-1.5-semitone and beat-slow-by-8.8% deviations. Unit tests still use self-synthesized 44100 signals and stay self-consistent
+- Document finger-angle wording synced to tiger-mouth angle so reviewers see consistent terminology against the code
+
+### v1.3 · Real-device warning clearance and release cleanup (2026-10-02)
+
+- All 13 real-device build warnings cleared: 8 closures changed to explicit weak capture with early exit when the view is gone; 3 timer callbacks moved to read isolated properties on the main actor; 2 direction counters that were computed but never used were removed
+- Chinese edition display name changed to 弹拨搭子, with the home title and microphone permission text updated in sync. The project name, target name and Bundle ID are unchanged, so the two editions can be installed side by side
+- International edition app icon replaced with the English artwork across default, dark and tinted appearances; the Chinese edition welcome screen switched to the Chinese logo
+   - Repository cleanup: architecture diagram and logo images, editable sources and the docs folder were removed, and the README no longer references any image
+
+### v1.4 · Chinese/English switchable edition (2026-10-12)
+
+- Added the Chinese/English switchable edition. A globe icon in the top-right of the home page opens language settings, allowing instant switching among Follow System / Chinese / English without reinstalling the app
+- UI text uses the Chinese source string as the key: English translations live in en.lproj/Localizable.strings, and Chinese uses the identity map in zh-Hans.lproj, falling back to the original string when English is unavailable
+- Language switching is managed by the LanguageManager singleton and written to UserDefaults; switching increments a token so the home page rebuilds the whole view tree via `.id()`, and every `L()` re-reads on the spot
+- The bilingual edition display name is PluckBuddy and its Bundle ID is com.zehuiwu.pluckbuddy.bilingual, coexisting with the Chinese edition 弹拨搭子 and the international edition PluckBuddy — all three can be installed on one iPhone
+
+## Known Limitations / To Be Improved
+
+- Classifier precision is still limited by the training data distribution. If the real-device console shows `rms > 0.05` but `pipa < 0.3`, the model's discriminative power is insufficient for the current microphone sound quality, and it needs to be retrained with the Create ML Sound Analysis template (≥ 30 clips of 16 kHz audio per class; a clearly better model can usually be produced within 30 minutes)
+- The provisioning profile of a free Apple ID expires after 7 days; you need to reconnect to Xcode and re-sign
+- Camera / microphone features require a real device and cannot be demoed on the Simulator
+- The Social Hub is an offline demo version; leaderboard / achievements / friend PK data is stored in local CoreData
+
+## License
+
+Source code of a competition entry; for review and learning purposes only.
+
+---
+
 # 弹拨搭子 — AI 琵琶陪练
 
 一款基于端侧 CoreML 的智能琵琶陪练 iOS 应用。摄像头识别手型 + 麦克风识别声音,实时给出指法评分、调音陪伴、节拍陪练,帮助习琴者在家也能练出标准音色与节奏。
 
 > 参赛作品 · 移动应用创新赛（中小学组） · 启航赛道
 >
-> 开发者:吴泽荟  
+> 开发者:吴泽荟
 > 学校:武汉康礼高级中学
-
----
 
 ## 本项目的技术贡献
 
@@ -71,8 +328,6 @@ iOS 上多个模块都想用麦克风，但 AVAudioEngine 的 tap 只能被一�
 - 采集、特征提取、推理、评估各跑在独立的队列上，主线程只负责刷新 UI
 - 练习录像、评分、排行榜全部写进本地 CoreData，不联网上传，也不从网络下载
 
----
-
 ## 系统架构
 
 采用端侧全离线五层架构,从麦克风 / 摄像头原始数据到 UI 反馈全部在 iPhone 上完成,无任何网络依赖。
@@ -130,8 +385,6 @@ flowchart TB
 - 第 4 层是演奏领域的判定逻辑，5 个检测器各管一个维度，彼此独立可测
 - 第 5 层只负责渲染，SwiftUI 订阅 ViewModel 的 Published 状态，不掺入计算
 
----
-
 ## 核心功能
 
 | 模块         | 说明                                                                          |
@@ -145,8 +398,6 @@ flowchart TB
 | **社交广场**   | 离线排行榜 / 成就 / 好友 PK(本地持久化,演示用)                                               |
 | **欢迎界面**   | 米白底 + Logo + "今天也来练 5 分钟吧" + 3 秒倒计时自动退出 + 右上角"跳过"                           |
 
----
-
 ## 技术栈
 
 - 开发语言是 Swift 6，界面用 SwiftUI，状态绑定用 Combine，并发按 Swift Concurrency 的严格模式编写
@@ -156,8 +407,6 @@ flowchart TB
 - 音频采集由自写的 AudioManager 统一装 tap，每缓冲 4096 帧，再用线性插值把硬件的 48 kHz 降到 16 kHz
 - 手型由 HandPoseExtractor 提取左右手各 21 个关键点，再算出虎口角度与手腕高度
 - Lottie 负责扫弦水波与跑道角色动画，CoreData 负责练习记录、排行榜与成就的本地持久化
-
----
 
 ## 项目结构
 
@@ -195,8 +444,6 @@ PluckBuddy/
 └── PluckBuddyTests/              # 单元测试 target
 ```
 
----
-
 ## 运行方式
 
 1. **Mac 上 Xcode 17+ 打开** `PluckBuddy.xcodeproj`
@@ -209,8 +456,6 @@ PluckBuddy/
 6. **摄像头 / 麦克风模块**(指法教练 / 调音 / 三个陪练)**必须真机运行**,模拟器无摄像头/麦克风
 
 免费 Apple ID 描述文件 7 天过期,到期需重连 Xcode 重新签名安装。
-
----
 
 ## 版本演进
 
@@ -250,8 +495,6 @@ PluckBuddy/
 - 语言切换由 LanguageManager 单例管理，选择写入 UserDefaults；切语言时递增 token，让首页以 .id() 重建整棵视图树，所有 L() 就地重新取值
 - 双语版桌面显示名定为 PluckBuddy，Bundle ID 为 com.zehuiwu.pluckbuddy.bilingual，与中文版「弹拨搭子」、国际版 PluckBuddy 三个版本可共存安装
 
----
-
 ## 已知限制 / 待改进
 
 - 分类器精度仍受训练数据分布限制。若真机 console 显示 `rms > 0.05` 但 `pipa < 0.3`,说明模型对当前麦克风音质判别力不足,需用 Create ML Sound Analysis 模板重训(每类 ≥ 30 条 16kHz 音频,通常 30 分钟内能出一个明显更好的模型)
@@ -259,8 +502,6 @@ PluckBuddy/
 - 摄像头 / 麦克风功能必须真机,模拟器无法演示
 - 社交广场为离线演示版,排行榜 / 成就 / 好友 PK 数据存储本地 CoreData
 
----
-
-## License
+## 许可证
 
 参赛作品源码,仅供评审与学习使用。
