@@ -208,7 +208,7 @@ The provisioning profile of a free Apple ID expires after 7 days; when it expire
 
 ## Version History
 
-From the first runnable build to the submitted version, the project went through four rounds of iteration, each driven by problems exposed by on-device testing. Step-by-step changes are recorded in the repository commit history.
+v1.0 through v1.3 were built as the Chinese edition between late September and early October 2026, each round driven by problems exposed by on-device testing. In parallel an English-only edition was developed from the same codebase. Both older editions are now archived; this repository unifies the line as PluckBuddy 2.0 and is the only maintained edition going forward. The commit history continues from the Chinese edition, so this repository shows the full trajectory from the first runnable build to today in one continuous timeline.
 
 ### v1.0 · First complete edition (2026-09-29)
 
@@ -243,6 +243,12 @@ From the first runnable build to the submitted version, the project went through
 - UI text uses the Chinese source string as the key: English translations live in en.lproj/Localizable.strings, and Chinese uses the identity map in zh-Hans.lproj, falling back to the original string when English is unavailable
 - Language switching is managed by the LanguageManager singleton and written to UserDefaults; switching increments a token so the home page rebuilds the whole view tree via `.id()`, and every `L()` re-reads on the spot
 - The bilingual edition display name is PluckBuddy and its Bundle ID is com.zehuiwu.pluckbuddy.bilingual, coexisting with the Chinese edition 弹拨搭子 and the international edition PluckBuddy — all three can be installed on one iPhone
+
+### v2.0 · Unified bilingual edition (2026-10-17)
+
+- The bilingual edition becomes the single maintained line as PluckBuddy 2.0. The Chinese edition and the English-only edition stop here and are archived, with their READMEs pointing to this repository
+- The commit history is grafted onto the Chinese edition, so this repository carries the whole trajectory from the first runnable build in late September to today in one continuous timeline
+- English mode leads the README and the full Chinese edition follows; both cover the same sections, and the English logo and app icon follow the interface language
 
 ## Known Limitations / To Be Improved
 
@@ -459,7 +465,7 @@ PluckBuddy/
 
 ## 版本演进
 
-从首个可运行版本到提交版本,项目一共走过四轮迭代,每一轮都由真机测试暴露的问题驱动。逐条改动明细见仓库的 commit 历史。
+v1.0 到 v1.3 是 2026 年 9 月底到 10 月初以中文版形态走完的四轮迭代,每一轮都由真机测试暴露的问题驱动。同期还从同一份代码并行做出一个全英文国际版。两个旧版本现已停止维护并归档,由本仓库统一继承,作为 PluckBuddy 2.0 继续演进。本仓库的 commit 历史自中文版嫁接而来,从 9 月底首个可运行版本到今天形成一条连续时间线。
 
 ### v1.0 · 首个完整版本(2026-09-29)
 
@@ -494,6 +500,12 @@ PluckBuddy/
 - 文案以中文原文为 key：英文译文集中在 en.lproj 下的 Localizable.strings，中文用 zh-Hans.lproj 的恒等映射表，取不到英文时回退为原文
 - 语言切换由 LanguageManager 单例管理，选择写入 UserDefaults；切语言时递增 token，让首页以 .id() 重建整棵视图树，所有 L() 就地重新取值
 - 双语版桌面显示名定为 PluckBuddy，Bundle ID 为 com.zehuiwu.pluckbuddy.bilingual，与中文版「弹拨搭子」、国际版 PluckBuddy 三个版本可共存安装
+
+### v2.0 · 统一双语版(2026-10-17)
+
+- 双语版成为唯一维护线，作为 PluckBuddy 2.0 继续演进。中文版与国际版到此停止维护并归档，各自 README 指向本仓库
+- commit 历史嫁接自中文版，本仓库因此承载从 9 月底首个可运行版本到今天的一条连续时间线
+- README 改为英文完整版在前、中文完整版在后，两版覆盖相同章节；欢迎页 logo 与桌面图标跟随界面语言切换
 
 ## 已知限制 / 待改进
 
