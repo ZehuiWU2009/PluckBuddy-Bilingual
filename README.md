@@ -9,7 +9,7 @@
 
 An intelligent Pipa practice companion iOS app built on on-device CoreML. The camera recognizes hand shape and the microphone recognizes sound, delivering real-time fingering scores, tuning assistance and metronome accompaniment, so that learners can develop a standard tone and rhythm at home.
 
-> Competition entry · Mobile App Innovation Contest (Primary & Secondary School Division) · Launch Track
+> Personal project · grown out of my own Pipa practice, still evolving
 >
 > Developer: Zehui Wu (吴泽荟)
 > School: Wuhan Cogdel Cranleigh High School (武汉康礼高级中学)
@@ -253,7 +253,7 @@ From the first runnable build to the submitted version, the project went through
 
 ## License
 
-Source code of a competition entry; for review and learning purposes only.
+Source code of a personal project; discussion and learning welcome.
 
 ---
 
@@ -261,7 +261,7 @@ Source code of a competition entry; for review and learning purposes only.
 
 一款基于端侧 CoreML 的智能琵琶陪练 iOS 应用。摄像头识别手型 + 麦克风识别声音,实时给出指法评分、调音陪伴、节拍陪练,帮助习琴者在家也能练出标准音色与节奏。
 
-> 参赛作品 · 移动应用创新赛（中小学组） · 启航赛道
+> 个人项目 · 源于自己的习琴需要,在长期练习中持续打磨
 >
 > 开发者:吴泽荟
 > 学校:武汉康礼高级中学
@@ -504,4 +504,4 @@ PluckBuddy/
 
 ## 许可证
 
-参赛作品源码,仅供评审与学习使用。
+个人项目源码,欢迎交流与学习。
