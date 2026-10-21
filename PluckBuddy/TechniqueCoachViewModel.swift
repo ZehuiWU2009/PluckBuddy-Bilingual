@@ -50,6 +50,12 @@ class TechniqueCoachViewModel: ObservableObject {
     /// 手部骨骼覆盖图像（用于显示在视频上）
     @Published var skeletonOverlayImage: UIImage?
     
+    /// 当前选择的练习曲目（默认「练习曲」）
+    @Published var selectedPiece: PracticePiece = .etude
+    
+    /// 演奏结束后生成的分析评价报告
+    @Published var report: CoachReport?
+    
     // MARK: - Internal Properties
     
     /// 视频捕获管理器（供 View 访问预览图层）
@@ -64,6 +70,9 @@ class TechniqueCoachViewModel: ObservableObject {
     private var rollEvaluator = RollPostureEvaluator()
     private var sweepEvaluator = SweepPostureEvaluator()
     private var pluckEvaluator = PluckPostureEvaluator()
+    
+    /// 端侧音频分析器：复用声音分类同一路采样，演奏结束后生成评价报告
+    private let audioAnalyzer = SessionAudioAnalyzer()
     
     /// Core ML 声音分类引擎（加载 PipaSoundClassifier）
     private let soundClassifier = PipaSoundClassifierEngine()
@@ -104,6 +113,10 @@ class TechniqueCoachViewModel: ObservableObject {
         
         cameraPermissionGranted = true
         print("✅ 摄像头权限已授予")
+
+        // 开始新一轮分析前清空上一次的评价报告与分析器累积数据
+        audioAnalyzer.reset()
+        report = nil
         
         // 2. 初始化视频捕获
         videoCapture = VideoCaptureManager()
@@ -158,6 +171,13 @@ class TechniqueCoachViewModel: ObservableObject {
             sessionDuration = Date().timeIntervalSince(start)
             print("   - 分析时长: \(String(format: "%.1f", sessionDuration))秒")
         }
+
+        // 用累积的视频手型 + 音频数据生成分析评价报告
+        let generated = audioAnalyzer.finalize(piece: selectedPiece, duration: sessionDuration)
+        report = generated
+        // 写入「我的成绩 - 历史」
+        CoachReportStore.shared.append(generated)
+        print("📊 已生成分析评价报告，综合得分 \(String(format: "%.1f", generated.overallScore))")
         
         // 重置状态
         detectedTechnique = .unknown
@@ -234,7 +254,11 @@ class TechniqueCoachViewModel: ObservableObject {
                 technique: stableTechnique,
                 features: features
             )
-            
+
+            // 把真实视频手型评估喂给报告分析器（后续与音频分析融合生成评价报告）
+            audioAnalyzer.recordTechnique(stableTechnique)
+            audioAnalyzer.recordPosture(evaluation: currentEvaluation!)
+
             updateStatusMessage()
         }
     }
@@ -582,6 +606,11 @@ class TechniqueCoachViewModel: ObservableObject {
             Task { @MainActor in
                 self?.applySoundResult(label: label, pipaProbability: probability)
             }
+        }
+
+        // 同一路 16 kHz 采样转发给端侧分析器（生成评价报告用），零额外采集成本
+        soundClassifier.onSamples = { [weak self] samples in
+            self?.audioAnalyzer.process(samples)
         }
         
         do {
@@ -1068,6 +1097,8 @@ final class PipaSoundClassifierEngine: @unchecked Sendable {
     
     private let queue = DispatchQueue(label: "com.pluckbuddy.soundclassifier", qos: .userInitiated)
     private var resultHandler: (@Sendable (String, Double) -> Void)?
+    /// 把同一路 16 kHz 单声道采样转发给外部（供智能指法教练的端侧分析器复用，零额外采集成本）
+    var onSamples: (([Float]) -> Void)?
     private var engine: AVAudioEngine?
     private var pendingSamples: [Float] = []
     private var recentProbabilities: [Double] = []
@@ -1160,9 +1191,11 @@ final class PipaSoundClassifierEngine: @unchecked Sendable {
             let inputFormat = input.outputFormat(forBus: 0)
             print("🎤 声音分类采集格式：\(inputFormat.sampleRate) Hz / \(inputFormat.channelCount) 声道")
             
+            let sampleHandler = self.onSamples
             input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
                 guard let self else { return }
                 let samples = Self.monoSamples(from: buffer, targetSampleRate: Self.sampleRate)
+                sampleHandler?(samples)
                 self.queue.async { self.append(samples) }
             }
             

@@ -189,6 +189,7 @@ class FlowerViewModel: ObservableObject {
         print("   - 序列长度: \(event.sequenceLength)")
         print("   - 当前速度: \(String(format: "%.1f", event.currentSpeed))次/秒")
         print("   - 振幅: \(String(format: "%.2f", event.note.amplitude))")
+        print("   - 有效阈值: \(String(format: "%.3f", rollDetector?.lastEffectiveThreshold ?? 0))")
         print("   - 间隔: \(String(format: "%.3f", event.note.interval))秒")
         print("   - 有效序列: \(event.isValidSequence ? "是" : "否")")
         

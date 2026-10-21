@@ -140,29 +140,83 @@ struct OverviewSection: View {
 // MARK: - History Section
 struct HistorySection: View {
     let sessions: [PracticeSession]
-    
+    @StateObject private var store = CoachReportStore.shared
+    @State private var selectedReport: CoachReport?
+
     var body: some View {
-        VStack(spacing: 16) {
-            if sessions.isEmpty {
+        VStack(alignment: .leading, spacing: 16) {
+            if sessions.isEmpty && store.reports.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "tray")
                         .font(.system(size: 60))
                         .foregroundStyle(.secondary)
-                    Text(L("还没有练习记录"))
+                    Text(L("还没有记录"))
                         .foregroundStyle(.secondary)
-                    Text(L("开始您的第一次练习吧！"))
+                    Text(L("开始练习或生成评价报告吧！"))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.top, 100)
             } else {
-                ForEach(sessions, id: \.id) { session in
-                    SessionRow(session: session)
+                if !sessions.isEmpty {
+                    ForEach(sessions, id: \.id) { session in
+                        SessionRow(session: session)
+                    }
                 }
-                .padding(.horizontal)
+
+                if !store.reports.isEmpty {
+                    Text(L("评价报告"))
+                        .font(.headline)
+                        .padding(.top, 4)
+                    ForEach(store.reports) { report in
+                        CoachReportHistoryRow(report: report)
+                            .onTapGesture { selectedReport = report }
+                    }
+                }
             }
         }
+        .padding(.horizontal)
         .padding(.top)
+        .sheet(item: $selectedReport) { report in
+            CoachReportView(report: report)
+        }
+    }
+}
+
+// MARK: - 评价报告历史行
+struct CoachReportHistoryRow: View {
+    let report: CoachReport
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "music.note.list")
+                .font(.title2)
+                .foregroundStyle(report.piece.theme.accent)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(report.piece.displayName)
+                    .font(.headline)
+                Text(report.dateText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("\(Int(report.overallScore)) " + L("分"))
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.blue)
+                Text(L("查看"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.05), radius: 4)
     }
 }
 
@@ -220,6 +274,27 @@ struct AchievementsSection: View {
                 isUnlocked: checkAllModes(),
                 progress: Double(getUniqueModes()) / 4.0
             )
+
+            // 乐曲维度成就（演奏家分级）：按「达标曲目数」去重（同一曲目不重复累计），初 / 进阶 / 大师三档
+            let qualified = CoachReportStore.shared.qualifiedPieceCount
+            AchievementCard(
+                title: L("初级演奏家"),
+                description: L("完成 1 首乐曲的演奏并达标"),
+                icon: "🎻",
+                isUnlocked: qualified >= 1,
+                progress: min(1.0, Double(qualified) / 1.0))
+            AchievementCard(
+                title: L("进阶演奏家"),
+                description: L("完成 3 首乐曲的演奏并达标"),
+                icon: "🎼",
+                isUnlocked: qualified >= 3,
+                progress: min(1.0, Double(qualified) / 3.0))
+            AchievementCard(
+                title: L("演奏大师"),
+                description: L("完成 5 首乐曲的演奏并达标"),
+                icon: "👑",
+                isUnlocked: qualified >= 5,
+                progress: min(1.0, Double(qualified) / 5.0))
         }
         .padding()
     }

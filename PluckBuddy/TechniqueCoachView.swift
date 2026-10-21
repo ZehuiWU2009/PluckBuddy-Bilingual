@@ -24,10 +24,10 @@ struct TechniqueCoachView: View {
             // 深色背景
             Color.black.ignoresSafeArea()
             
-            VStack(spacing: 16) {
-                // 摄像头预览区域
-                cameraPreviewSection
-                
+        VStack(spacing: 16) {
+            // 摄像头预览区域
+            cameraPreviewSection
+
                 // 合并的检测结果和评估面板（常驻显示）
                 // 核心要求已压缩为面板顶部一行，不再单独占一块卡片
                 combinedEvaluationPanel
@@ -51,7 +51,21 @@ struct TechniqueCoachView: View {
         }
         .navigationTitle(L("智能指法教练"))
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $viewModel.report) { report in
+            CoachReportView(report: report)
+        }
         .toolbar {
+            // 练习曲目选择（顶部中间，分段控件）
+            ToolbarItem(placement: .principal) {
+                Picker("", selection: $viewModel.selectedPiece) {
+                    ForEach(PracticePiece.allCases) { piece in
+                        Text(piece.displayName).tag(piece)
+                    }
+                }
+                .pickerStyle(.menu)
+                .disabled(viewModel.isAnalyzing)
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     // 技法测试
@@ -148,8 +162,8 @@ struct TechniqueCoachView: View {
     
     private var combinedEvaluationPanel: some View {
         VStack(spacing: 0) {
-            // 顶部：技法要求单行轮播（32pt，替代原先独立的卡片）
-            RequirementStripView(technique: displayTechnique)
+            // 顶部：单行轮播——选定乐曲时轮播乐曲文案，「指法基本功」轮播技法要求（32pt，不扩大）
+            RequirementStripView(technique: displayTechnique, piece: viewModel.selectedPiece)
             
             // 分隔线
             Divider()
@@ -668,35 +682,49 @@ struct CompactAspectView: View {
 
 // MARK: - 核心要求轮播视图
 
-/// 技法要求单行轮播。
+/// 单行轮播：选定乐曲时逐条切换该曲的背景 / 历史 / 情感文案（无标题、单行不扩大），
+/// 选「指法基本功」时轮播当前技法的练习要求。
 /// 原先是横向跑马灯（文字从屏幕右侧外滚进来，50 pt/s，七八秒后才露头，且技法一切换就重置），
 /// 后来改成独立卡片 + 逐条淡入切换，仍占 86pt 高。这里压缩成 32pt 单行走条，并入下方面板顶部。
 struct RequirementStripView: View {
     let technique: TechniqueType
-    
+    let piece: PracticePiece
+
     @State private var index = 0
     @State private var tick = Timer.publish(every: 4.0, on: .main, in: .common).autoconnect()
-    
+
+    /// 乐曲模式：该曲的知识提示逐条轮播；基本功模式：技法练习要求。
     private var items: [String] {
-        TechniqueRequirementsManager.getRequirements(for: technique)
+        if !piece.hints.isEmpty {
+            return piece.hints
+        }
+        return TechniqueRequirementsManager.getRequirements(for: technique)
     }
-    
+
+    private var isPieceMode: Bool { !piece.hints.isEmpty }
+
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: "lightbulb.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(.yellow)
-            
+            if isPieceMode {
+                Image(systemName: "music.note")
+                    .font(.system(size: 11))
+                    .foregroundStyle(piece.theme.accent)
+            } else {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.yellow)
+            }
+
             Text(items.isEmpty ? L("暂无要求") : items[safeIndex])
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.white.opacity(0.92))
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.9)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .id(safeIndex)
                 .transition(.opacity)
                 .animation(.easeInOut(duration: 0.3), value: safeIndex)
-            
+
             if items.count > 1 {
                 Text("\(safeIndex + 1)/\(items.count)")
                     .font(.system(size: 11))
@@ -714,9 +742,12 @@ struct RequirementStripView: View {
         .onChange(of: technique) { _, _ in
             index = 0
         }
+        .onChange(of: piece) { _, _ in
+            index = 0
+        }
     }
-    
-    /// 防止技法切换后条目数变化导致下标越界
+
+    /// 防止切换后条目数变化导致下标越界
     private var safeIndex: Int {
         guard !items.isEmpty else { return 0 }
         return min(index, items.count - 1)

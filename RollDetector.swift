@@ -14,15 +14,26 @@ class RollDetector {
     
     // MARK: - Configuration
     private let sampleRate: Double
-    private let rollThreshold: Float = 0.1 // 轮指检测阈值（较低，因为轮指力度较轻）
+    /// 绝对下限：保证极轻的拨弦也能被识别（线性幅度，约 -34 dBFS）
+    private let baseThreshold: Float = 0.02
+    /// 自适应阈值 = 噪声底 × 该倍数，使灵敏度不依赖设备/麦克风增益
+    private let noiseMargin: Float = 4.0
+    /// 噪声底指数平滑系数（慢速更新，避免被乐音抬高）
+    private let noiseFloorAlpha: Float = 0.004
+    /// 释放迟滞：电平须回落到阈值的该比例以下才允许下一次触发，避免单个衰减音被重复计数
+    private let releaseHysteresis: Float = 0.4
     private let minRollInterval: Double = 0.05 // 最小间隔 50ms（20 次/秒）
     private let maxRollInterval: Double = 0.15 // 最大间隔 150ms（6.7 次/秒）
     private let rollSequenceMinCount = 4 // 至少连续 4 次才算轮指
     
     // MARK: - State
+    private var noiseFloor: Float = 0.01 // 环境噪声底估计
+    private var armed: Bool = true // Schmitt 触发：是否允许下一次音符检测
     private var lastDetectionTime: Date?
     private var currentSequence: [RollNote] = [] // 当前轮指序列
     private var rollSpeed: Double = 0 // 轮指速度（次/秒）
+    /// 最近一次有效阈值（调试用）
+    private(set) var lastEffectiveThreshold: Float = 0.02
     
     // MARK: - Callbacks
     var onRollDetected: ((RollEvent) -> Void)?
@@ -47,12 +58,26 @@ class RollDetector {
         var peak: Float = 0.0
         vDSP_maxv(channelData, 1, &peak, vDSP_Length(frameLength))
         
-        // 2️⃣ 检查是否超过阈值
-        guard peak > rollThreshold else {
-            // 如果一段时间没有检测到，结束当前序列
+        // 自适应阈值：噪声底随环境缓慢更新；有效阈值 = max(绝对下限, 噪声底 × 倍数)
+        let threshold = max(baseThreshold, noiseFloor * noiseMargin)
+        lastEffectiveThreshold = threshold
+        // 仅当信号明显低于阈值时更新噪声底，避免被乐音拉高
+        if peak < threshold * 0.4 {
+            noiseFloor = noiseFloor * (1 - noiseFloorAlpha) + peak * noiseFloorAlpha
+        }
+        
+        // 释放迟滞：电平回落到阈值以下后才重新“武装”，避免同一衰减音被重复计数
+        if peak < threshold * releaseHysteresis {
+            armed = true
+        }
+        
+        // 2️⃣ 阈值判定（带 Schmitt 触发）
+        guard peak > threshold, armed else {
+            // 一段时间没有检测到，结束当前序列
             checkSequenceTimeout()
             return nil
         }
+        armed = false
         
         // 3️⃣ 检查时间间隔
         let now = Date()
@@ -172,6 +197,7 @@ class RollDetector {
         lastDetectionTime = nil
         currentSequence.removeAll()
         rollSpeed = 0
+        armed = true
     }
 }
 

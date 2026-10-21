@@ -64,6 +64,7 @@ struct WelcomeView: View {
                 VStack(spacing: 3) {
                     Text(L("开发者：吴泽荟"))
                     Text(L("学校：武汉康礼高级中学"))
+                    Text(L("指导老师：路建"))
                 }
                 .font(.system(size: 12))
                 .foregroundStyle(Self.brandPurple.opacity(0.55))
