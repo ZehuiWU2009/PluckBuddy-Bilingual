@@ -12,7 +12,8 @@ import Combine
 /// 应用内语言选项
 enum AppLanguage: String, CaseIterable, Identifiable {
     case system = "auto"
-    case zh = "zh-Hans"
+    case zhHans = "zh-Hans"
+    case zhHant = "zh-Hant"
     case en = "en"
 
     var id: String { rawValue }
@@ -21,7 +22,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .system: return "跟随系统"
-        case .zh:     return "中文"
+        case .zhHans: return "简体中文"
+        case .zhHant: return "繁體中文"
         case .en:     return "English"
         }
     }
@@ -48,9 +50,12 @@ final class LanguageManager: ObservableObject {
         switch current {
         case .system:
             let pref = Bundle.main.preferredLocalizations.first ?? "zh-Hans"
-            return pref.hasPrefix("en") ? "en" : "zh-Hans"
-        case .zh: return "zh-Hans"
-        case .en: return "en"
+            if pref.hasPrefix("en") { return "en" }
+            if pref.contains("Hant") { return "zh-Hant" }
+            return "zh-Hans"
+        case .zhHans: return "zh-Hans"
+        case .zhHant: return "zh-Hant"
+        case .en:     return "en"
         }
     }
 
