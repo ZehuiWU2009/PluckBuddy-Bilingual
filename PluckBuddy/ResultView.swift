@@ -58,6 +58,7 @@ struct ResultView: View {
 // MARK: - Overview Section
 struct OverviewSection: View {
     @ObservedObject var dataManager: PracticeDataManager
+    @StateObject private var coachStore = CoachReportStore.shared
     
     var body: some View {
         VStack(spacing: 20) {
@@ -121,6 +122,9 @@ struct OverviewSection: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: .black.opacity(0.05), radius: 8)
             .padding(.horizontal)
+
+            // 智能指法教练 · 曲目维度统计
+            PieceDimensionSection(reports: coachStore.reports)
         }
         .padding(.top)
     }
@@ -285,16 +289,16 @@ struct AchievementsSection: View {
                 progress: min(1.0, Double(qualified) / 1.0))
             AchievementCard(
                 title: L("进阶演奏家"),
-                description: L("完成 3 首乐曲的演奏并达标"),
-                icon: "🎼",
-                isUnlocked: qualified >= 3,
-                progress: min(1.0, Double(qualified) / 3.0))
-            AchievementCard(
-                title: L("演奏大师"),
                 description: L("完成 5 首乐曲的演奏并达标"),
-                icon: "👑",
+                icon: "🎼",
                 isUnlocked: qualified >= 5,
                 progress: min(1.0, Double(qualified) / 5.0))
+            AchievementCard(
+                title: L("演奏大师"),
+                description: L("完成 10 首乐曲的演奏并达标"),
+                icon: "👑",
+                isUnlocked: qualified >= 10,
+                progress: min(1.0, Double(qualified) / 10.0))
         }
         .padding()
     }
@@ -457,6 +461,135 @@ struct DailyPracticeChart: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - 智能指法教练 · 曲目维度统计
+
+private struct PieceStat {
+    let piece: PracticePiece
+    let count: Int
+    let best: Double
+    let avg: Double
+    let qualified: Bool
+}
+
+struct PieceDimensionSection: View {
+    let reports: [CoachReport]
+
+    private var grouped: [PieceStat] {
+        Dictionary(grouping: reports, by: { $0.piece }).map { (piece, rs) in
+            let scores = rs.map { $0.overallScore }
+            let best = scores.max() ?? 0
+            let avg = scores.reduce(0, +) / Double(scores.count)
+            return PieceStat(piece: piece, count: rs.count, best: best, avg: avg, qualified: best >= 70)
+        }
+        .sorted { $0.best > $1.best }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "music.note.list")
+                    .foregroundStyle(.purple)
+                Text(L("智能指法教练 · 曲目维度"))
+                    .font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal)
+
+            if reports.isEmpty {
+                Text(L("还没有智能指法教练的评价报告"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+            } else {
+                HStack(spacing: 12) {
+                    PieceStatPill(title: L("评价报告"), value: "\(reports.count)")
+                    PieceStatPill(title: L("涉及曲目"), value: "\(grouped.count)")
+                    PieceStatPill(title: L("达标曲目"), value: "\(grouped.filter { $0.qualified }.count)")
+                }
+                .padding(.horizontal)
+
+                VStack(spacing: 12) {
+                    ForEach(grouped, id: \.piece) { item in
+                        PieceStatRow(item: item)
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+        .padding(.vertical)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.05), radius: 8)
+        .padding(.horizontal)
+    }
+}
+
+private struct PieceStatPill: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title3.bold())
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(Color(.systemFill))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+private struct PieceStatRow: View {
+    let item: PieceStat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: "music.note")
+                    .foregroundStyle(item.piece.theme.accent)
+                Text(item.piece.displayName)
+                    .font(.subheadline.bold())
+                Spacer()
+                if item.qualified {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+                Text("\(Int(item.best)) " + L("分"))
+                    .font(.subheadline.bold())
+                    .foregroundStyle(scoreColor(item.best))
+            }
+
+            Text(L("练习") + " \(item.count) " + L("次"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color(.systemFill))
+                        .frame(height: 6)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(scoreColor(item.best))
+                        .frame(width: geo.size.width * CGFloat(item.best / 100), height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
+    private func scoreColor(_ s: Double) -> Color {
+        if s >= 90 { return .green }
+        if s >= 70 { return .blue }
+        if s >= 60 { return .orange }
+        return .red
     }
 }
 

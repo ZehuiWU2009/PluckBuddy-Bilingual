@@ -26,7 +26,7 @@
 "5 分钟" = "5 min";
 "5分钟" = "5 min";
 "60分钟" = "60 min";
-"AI 实时分析你的弹奏姿势" = "AI analyzes your playing posture in real time";
+"AI 实时分析你的演奏质量" = "AI analyzes your playing quality in real time";
 "\n尝试两个方向都练习" = "\nTry practicing both directions";
 "\n方向平衡很好！" = "\nDirection balance is great!";
 "⚠️ 需要改进姿势" = "⚠️ Posture needs work";
@@ -318,7 +318,7 @@
 "节奏" = "Rhythm";
 "节奏稳定" = "Rhythm is stable";
 "节奏稳定性" = "Rhythm Stability";
-"节奏练习变成跑步游戏" = "Turn rhythm practice into a running game";
+"弹挑练习变身跑步游戏" = "Turn plucking practice into a running game";
 "节奏高手" = "Rhythm Ace";
 "节拍器" = "Metronome";
 "节拍器将以您设定的目标速度播放，帮助您保持稳定的扫弦节奏" = "The metronome plays at your target speed to help you keep a steady sweep rhythm";
@@ -582,6 +582,7 @@
 "完成 5 首乐曲的演奏并达标" = "Perform 5 pieces and meet the standard";
 "演奏大师" = "Master Performer";
 "完成 3 首乐曲的演奏并达标" = "Perform 3 pieces and meet the standard";
+"完成 10 首乐曲的演奏并达标" = "Perform 10 pieces and meet the standard";
 
 /* 2026-10-21 新增 6 首乐曲 + 演奏家成就按去重曲目数 */
 
@@ -703,3 +704,153 @@
 
 "注重旋律的连贯与气息感，练习时以连奏与揉弦让乐句如歌般流畅。" = "Focus on melodic continuity and breath: use legato and vibrato so phrases flow like song.";
 "加强力度层次，用渐强渐弱突出乐曲的表现与意境。" = "Strengthen dynamic layering: use crescendo and diminuendo to bring out expression and mood.";
+
+// 曲目文化短句与报告介绍（2026-10）
+// 春江花月夜
+"古曲《夕阳箫鼓》，流传为春江月色" = "Once known as Sunset Flute and Drum";
+"柳尧章改编合奏，古韵走向新声" = "Liu Yaozhang recast it for ensemble";
+"江南水乡入弦，铺开一卷烟水" = "Jiangnan unfolds in mist and water";
+"江楼钟鼓渐远，暮色轻落水面" = "Tower bells fade across dusk waters";
+"月上东山，一江清辉缓缓流动" = "Moonlight spills over the east hills";
+"花影随波摇曳，虚实如水墨相生" = "Blossom shadows drift like ink";
+"渔歌从远处来，归舟划破月影" = "A fishing boat parts the moonlight";
+"乐句回环相接，宛如长卷徐展" = "Linked phrases unroll like a scroll";
+"轻重浓淡之间，藏着江南诗意" = "Soft shades hold Jiangnan poetry";
+"余音缓缓散去，留下满江清静" = "The last notes leave a quiet river";
+"《春江花月夜》源自传统琵琶曲《夕阳箫鼓》，原作者未详；柳尧章等将其改编为丝竹合奏，广为流传。钟鼓、花影与归舟在弦间次第展开，如一卷江南水墨，把中国诗画中的月夜清景化作悠长余韵。" = "Rooted in the traditional pipa piece Sunset Flute and Drum, whose original composer is unknown, this music reached new audiences through Liu Yaozhang and others' ensemble arrangements. Bells, blossom shadows and returning boats unfold like a Jiangnan ink scroll, turning moonlit landscape into lingering sound.";
+
+// 十面埋伏
+"琵琶武曲名篇，写楚汉争锋之势" = "A martial classic of Chu and Han";
+"华秋苹编谱，让古曲留有文字" = "Hua Qiuping preserved it in notation";
+"垓下决战入乐，千军汇于四弦" = "Four strings summon armies at Gaixia";
+"列营点将声起，如见旌旗翻卷" = "Muster calls rise beneath banners";
+"埋伏处收住锋芒，静中自有惊雷" = "In ambush, silence gathers force";
+"扫拂层层推进，鼓角与马蹄交织" = "Sweeps weave drums and hoofbeats";
+"急弦忽如交锋，疏密写出战局" = "Dense attacks evoke clashing forces";
+"楚歌四起之际，胜负化为悲欢" = "Songs of Chu turn triumph to sorrow";
+"一曲有起伏，如读史传的章节" = "The music unfolds like a chronicle";
+"收弦仍有余势，历史回响不息" = "History echoes beyond the last note";
+"《十面埋伏》是作者未详的传统琵琶武曲，清代华秋苹《琵琶谱》已有收录。乐曲以楚汉相争为题，从列营点将写到垓下鏖战，借扫拂与急促弹挑织出鼓角、马蹄和交锋之声，四根弦上展开一场历史风云。" = "A traditional martial pipa work of unknown authorship, Ambush from Ten Sides appears in Hua Qiuping's Qing-era score collection. The struggle between Chu and Han unfolds from military muster to battle at Gaixia; sweeping strings and rapid attacks evoke drums, hoofbeats and clashing armies.";
+
+// 霸王卸甲
+"同写楚汉之争，此曲回望项羽" = "The Chu–Han struggle through Xiang Yu";
+"古曲经华秋苹编谱，传续至今" = "Hua Qiuping's collection preserves it";
+"开篇鼓角雄浑，犹见霸王气概" = "Opening drums recall a hero's might";
+"战阵由盛转衰，弦音渐染苍凉" = "Battle's grandeur darkens into loss";
+"四面楚歌声起，乡音最动人心" = "Songs of home surround the camp";
+"别姬一段柔情，藏在铁甲之下" = "Tender farewell beneath the armour";
+"乌江风起，英雄亦有难舍之情" = "By the Wu River, parting grows hard";
+"强弱明暗相映，悲壮才有层次" = "Light and shade deepen the tragedy";
+"武曲也能细诉，刚劲之中见柔" = "Martial strength can speak softly";
+"尾声留住叹息，听见命运回声" = "A final sigh carries fate's echo";
+"《霸王卸甲》是传统琵琶武曲，原作者未详，清代华秋苹等人的编谱保存了它的传承。它从项羽的命运落笔，将战阵雄威转为楚歌与别姬的悲情，让铁甲之下的眷恋与不舍，在刚柔相济的弦声中缓缓显现。" = "Preserved in Qing-era collections including Hua Qiuping's, this traditional martial pipa piece has no known original composer. It follows Xiang Yu's fate from battlefield grandeur to songs of Chu and farewell to his beloved. Powerful and tender passages reveal the human grief beneath the armour.";
+
+// 大浪淘沙
+"阿炳传下此曲，身世融入弦声" = "Abing's legacy lives in these strings";
+"华彦钧是本名，民间称他阿炳" = "Abing was born Hua Yanjun";
+"无锡民间乐声，滋养他的琴心" = "Wuxi's folk music shaped his art";
+"题名借浪淘沙，也可寄寓人生" = "Waves washing sand suggest life's trials";
+"开篇深沉如诉，缓缓道出心事" = "A solemn opening speaks from within";
+"旋律渐渐昂起，沉郁中生力量" = "The melody rises from grief to strength";
+"急处铿锵向前，似与风浪相搏" = "Firm rhythms press against the storm";
+"疏密强弱之间，听见不屈之意" = "Resolve lives in each change of weight";
+"民间传承如水，历经岁月不息" = "Folk traditions flow across generations";
+"弦声穿过风浪，仍向明亮处行" = "Beyond the waves, the music seeks light";
+"《大浪淘沙》由无锡民间音乐家华彦钧（阿炳）传谱，凝聚着他在民间音乐中积累的独特表达。乐曲从深沉倾诉走向铿锵激越，题名中的风浪既引人想见江涛，也让人联想到人生沉浮与不肯低头的精神。" = "Passed down by Wuxi folk musician Hua Yanjun, known as Abing, this piece carries his distinctive musical voice. Reflective phrases grow into ringing, vigorous motion. Its title, Great Waves Washing the Sand, invites images of surging water and of a life meeting hardship with resolve.";
+
+// 阳春白雪
+"传统琵琶古曲，奏出大地回春" = "A traditional tune welcomes spring";
+"汪昱庭传小阳春，古调添新彩" = "Wang Yuting passed on Little Spring";
+"民间曲调相连，生出明快气息" = "Linked folk tunes bring fresh energy";
+"白雪消融之际，草木渐有新意" = "Melting snow gives way to new growth";
+"清亮弹挑似珠，落在初春枝头" = "Bright plucks gleam on spring branches";
+"旋律轻快跳动，如风拂过花间" = "The tune skips like wind through flowers";
+"反复中有变化，春色层层铺展" = "Each return reveals another spring shade";
+"雅趣来自民间，也在日常生长" = "Folk life gives this elegance its roots";
+"轻盈里藏劲健，欢悦自有分寸" = "Lightness carries strength and poise";
+"一曲晴明收住，心间仍有春光" = "Spring light stays after the last note";
+"《阳春白雪》是作者未详的传统琵琶曲，流传有大小阳春等版本，汪昱庭所传《小阳春》尤具影响。民间曲调在弹挑间轻快流转，仿佛残雪初融、花枝迎风；明净而有生气的音色，写出中国人迎春惜时的欢悦。" = "This traditional pipa work of unknown authorship survives in several versions, including Wang Yuting's influential Little Spring. Folk melodies move through crisp, lively plucking like thawing snow and branches stirred by a breeze, expressing the delight of welcoming a new season.";
+
+// 昭君出塞
+"阿炳传谱之曲，借昭君故事抒怀" = "Abing's version evokes Zhaojun's journey";
+"华彦钧的弦声，留下民间记忆" = "Hua Yanjun's music holds folk memory";
+"昭君远行出塞，身后是故乡山河" = "Zhaojun leaves her homeland behind";
+"汉代和亲往事，化作千年回响" = "A Han marriage echoes across centuries";
+"诗歌戏曲相续，各写一份离情" = "Poetry and theatre retell her parting";
+"塞外风光辽阔，更显心事深长" = "Open frontiers deepen private longing";
+"旋律回环往复，似把牵挂轻诉" = "Returning phrases carry quiet longing";
+"节奏渐行渐紧，如远路上的步履" = "The pulse quickens like a long journey";
+"乡愁之外，也有走向远方的勇气" = "Beyond homesickness lies courage";
+"让余音留住远望，情深不必声重" = "Let a soft echo hold the distant gaze";
+"《昭君出塞》在琵琶中有阿炳（华彦钧）传谱的版本，其曲调来源尚难确考。昭君远赴塞外的汉代故事，历来为诗歌与戏曲吟咏；乐曲以回环旋律和渐紧节奏，把离乡的牵挂、远行的步履与面对未知的心绪交织在一起。" = "The pipa repertoire includes a version passed down by Abing (Hua Yanjun), whose melodic origins remain uncertain. Zhaojun's Han-era journey beyond the frontier has inspired poetry and theatre for centuries. Returning melodies and a tightening pulse suggest homesickness, onward steps and an uncertain future.";
+
+// 平沙落雁
+"琵琶亦有此古曲，自具传承脉络" = "This pipa classic has its own lineage";
+"杨大钧传演奏谱，延续平湖古韵" = "Yang Dajun carried the Pinghu tradition";
+"诗画融入弦声，重在景中有情" = "Poetry and painting meet in sound";
+"秋水连着远天，沙洲迎来雁影" = "Autumn water meets a sky of geese";
+"雁阵回翔相应，疏密自成章法" = "Wheeling geese shape a living pattern";
+"一声雁唳入秋，牵出远行之思" = "An autumn call stirs thoughts of travel";
+"鸿雁寄书之意，久在中国诗中" = "Geese carry letters in Chinese poetry";
+"动处轻灵有致，静处余韵悠长" = "Grace in motion, resonance in stillness";
+"留白如画中水，未写也有波光" = "Silence is water left blank in ink";
+"收音放远些，让秋意慢慢散开" = "Let the last note drift into autumn";
+"《平沙落雁》是传统琵琶曲，原作者未详；平湖派传人杨大钧留下的演奏谱承续了它的诗画气韵。秋水、沙洲与回翔雁影在疏密弦声中相映，既有山水画的留白，也寄托着中国诗歌中鸿雁远行、怀人寄情的意味。" = "A traditional pipa piece of unknown authorship, Wild Geese over the Sandbank retains its poetic character in the performing version passed down by Pinghu master Yang Dajun. Autumn water, sandbanks and circling geese emerge through sound and silence, recalling the longing associated with wild geese in Chinese poetry.";
+
+// 新番羽调绿腰
+"杨洁明创作此曲，遥想唐人乐舞" = "Yang Jieming reimagines Tang dance";
+"绿腰是唐代舞名，舞意流转千年" = "Luyao names a dance of the Tang era";
+"古名也称六幺，曾入唐人诗句" = "Also called Liuyao in Tang poetry";
+"新翻之意在更新，古韵由今人续" = "An old dance finds a new musical voice";
+"散起如舒舞袖，徐徐展开身姿" = "A free opening unfolds like silk sleeves";
+"节拍由缓入急，舞步渐见飞扬" = "The pulse gathers into soaring steps";
+"旋律曲折婉转，似绫罗随风回旋" = "Turning melodies suggest flowing silk";
+"长安乐舞气象，藏在轻重缓急" = "Tang grandeur lives in changing rhythms";
+"雍容与灵动并存，华美不失含蓄" = "Grace and movement temper splendour";
+"曲终舞意未尽，衣袂仿佛仍在" = "The last note leaves a sleeve in flight";
+"《新番羽调绿腰》由作曲家杨洁明创作，借唐代《绿腰》乐舞意象，以现代琵琶语言遥想长安风华。舒展的散起与渐趋明快的节奏，如舞袖由低回而飞扬，让唐人诗中轻盈婉转的舞姿，在四弦间获得新的生命。" = "Composer Yang Jieming draws on the imagery of the Tang dance Luyao, reimagining Chang'an's splendour for modern pipa. A freely unfolding opening leads to brighter motion, like silk sleeves rising into flight. The graceful dance celebrated in Tang poetry finds new life on four strings.";
+
+// 阳光照耀着塔什库尔干
+"陈钢原作写高原，陈音移植琵琶" = "Chen Gang's work, adapted by Chen Yin";
+"塔什库尔干，坐落在帕米尔高原" = "Tashkurgan lies high in the Pamirs";
+"塔吉克音乐风情，在旋律中流淌" = "Tajik musical colours shape the melody";
+"高山映着晴空，长调舒展如歌" = "A broad song opens beneath clear skies";
+"歌声由远而近，热情渐渐升起" = "A distant song draws near and warms";
+"舞曲节奏跃动，脚步轻快有力" = "Dance rhythms spring with firm steps";
+"重音错落有致，欢舞更添生气" = "Shifting accents bring the dance alive";
+"琵琶声线明亮，映出高原阳光" = "Bright strings catch highland sunlight";
+"不同乐器相遇，共述一方风情" = "Different instruments share one landscape";
+"收束仍带笑意，把热烈留在心间" = "Let the closing joy keep its warmth";
+"《阳光照耀着塔什库尔干》原为陈钢创作的小提琴曲，陈音将其移植为琵琶曲。作品吸收塔吉克音乐素材，将帕米尔高原的辽阔歌声与热烈舞步相融；明亮弦音宛如阳光越过雪山，呈现中华民族音乐文化的多彩风貌。" = "Originally a violin work by Chen Gang and adapted for pipa by Chen Yin, this piece draws on Tajik musical material. Expansive song and spirited dance meet in a Pamir landscape; bright strings suggest sunlight crossing snowy peaks and celebrate the diversity of China's musical cultures.";
+
+// 草原小姐妹
+"吴祖强、王燕樵、刘德海共同作曲" = "By Wu, Wang and Liu together";
+"龙梅与玉荣的故事，走进了音乐" = "The story of Longmei and Yurong";
+"草原放牧开篇，牧歌铺向天边" = "A pastoral song opens the grasslands";
+"蒙古族音乐风格，带来辽阔气息" = "Mongolian musical colours open the vista";
+"风雪骤然袭来，节奏卷起急浪" = "A sudden blizzard drives the rhythm";
+"小姐妹追护羊群，足迹没入雪中" = "The sisters guard their flock in snow";
+"长轮连绵如风，扫弦写出险境" = "Tremolo and sweeps summon the storm";
+"抒情与激越交替，柔情托起勇敢" = "Tenderness and urgency reveal courage";
+"琵琶与乐队应答，共同讲述故事" = "Pipa and orchestra tell the story";
+"风雪之后的暖意，留给坚韧的心" = "Warmth after the storm honours resolve";
+"《草原小姐妹》由吴祖强、王燕樵与琵琶演奏家刘德海共同创作，是著名琵琶协奏曲。作品取材于龙梅、玉荣在暴风雪中保护羊群的故事，以蒙古族音乐风格贯穿牧歌与风雪，让草原的辽阔、姐妹的温情与勇敢相互映照。" = "Composed by Wu Zuqiang, Wang Yanqiao and pipa virtuoso Liu Dehai, this celebrated concerto tells of Longmei and Yurong protecting their flock in a blizzard. Mongolian musical colours connect pastoral song with storm, setting the sisters' tenderness and courage against the open grasslands.";
+
+// 渭水情
+"任鸿翔写下此曲，寄情三秦故土" = "Ren Hongxiang writes of his Qin homeland";
+"渭水穿行关中，滋养古老家园" = "The Wei River nourishes Guanzhong";
+"秦腔音韵入弦，乡音便有了形状" = "Qinqiang inflections give home a voice";
+"起句如远处呼唤，牵出故园旧影" = "An opening call recalls a distant home";
+"慢板曲折深长，似长辈娓娓叙旧" = "The slow melody tells old family tales";
+"推拉吟揉之间，字字都有乡情" = "Bends and vibrato carry homesickness";
+"快板转为热烈，黄土也有明亮" = "Brisk motion lights the loess landscape";
+"苍劲不掩细腻，豪迈亦可含情" = "Boldness holds a tender inner voice";
+"河流连接古今，乡音连接人心" = "The river links ages; song links hearts";
+"一弦留住故乡，余韵仍随水远" = "The last resonance follows the river home";
+"《渭水情》由作曲家任鸿翔创作，吸收秦腔等陕西地方音乐语汇，寄托对三秦故土的深切眷恋。慢板如临渭水听乡音，快板则迸出关中大地的热情；婉转吟揉与苍劲弹拨相依，让一条河流承载起悠长的乡情。" = "Ren Hongxiang draws on Qinqiang opera and other Shaanxi musical idioms to express his attachment to the Qin homeland. Slow phrases suggest familiar voices beside the Wei River; brisk passages release Guanzhong's warmth and vitality. Supple bends and firm plucking give enduring homesickness a musical voice.";
+
+/* 2026-10-22 我的成绩-总览：智能指法教练曲目维度统计 */
+"智能指法教练 · 曲目维度" = "Technique Coach · Piece Breakdown";
+"涉及曲目" = "Pieces Covered";
+"达标曲目" = "Qualified Pieces";
+"还没有智能指法教练的评价报告" = "No Technique Coach evaluation reports yet";

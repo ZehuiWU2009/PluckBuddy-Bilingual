@@ -3,7 +3,8 @@
 //  PluckBuddy
 //
 //  演奏结束后弹出的「分析评价报告」。融合视频手型评估与音频分析，
-//  结构为：总体评价 → 四维度得分 → 详细分析 → 错误定位与建议。
+//  头部以情感把握的一句话替代原「总体评价」，结构为：
+//  头部（曲目/时长/综合得分/情感句/背景介绍）→ 四维度得分 → 详细分析 → 错误定位与建议。
 //
 
 import SwiftUI
@@ -11,6 +12,9 @@ import SwiftUI
 struct CoachReportView: View {
     let report: CoachReport
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var theme: PieceTheme { report.piece.theme }
 
     private var durationText: String {
         let total = Int(report.duration)
@@ -24,7 +28,6 @@ struct CoachReportView: View {
                     headerSection
                     dimensionsSection
                     pieceSection
-                    emotionalSection
                     detailsSection
                     errorSection
                     suggestionSection
@@ -37,25 +40,15 @@ struct CoachReportView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.blue)
+                            .background(theme.gradient[0])
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                     .padding(.top, 4)
                 }
                 .padding(16)
             }
-            .background(
-                ZStack {
-                    Color(.systemBackground)
-                    LinearGradient(
-                        colors: report.piece.theme.gradient,
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .opacity(0.16)
-                }
-                .ignoresSafeArea()
-            )
+            .background(reportBackground.ignoresSafeArea())
+            .tint(theme.accent)
             .navigationTitle(L("分析评价报告"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -63,6 +56,65 @@ struct CoachReportView: View {
                     Button(L("关闭")) { dismiss() }
                 }
             }
+        }
+    }
+
+    // 色彩只作用于背景与装饰；布局、评分语义色及交互保持原有行为。
+    private var reportBackground: some View {
+        ZStack {
+            Color(.systemBackground)
+            LinearGradient(
+                colors: theme.gradient,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .opacity(colorScheme == .dark ? 0.30 : 0.28)
+            RadialGradient(
+                colors: [theme.gradient[2].opacity(0.24), .clear],
+                center: .topTrailing,
+                startRadius: 0,
+                endRadius: 420
+            )
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func cardBackground(highlighted: Bool = false) -> some View {
+        ZStack {
+            // 实色底确保深浅外观下，背景色不会干扰正文与评分。
+            Color(.secondarySystemBackground)
+            LinearGradient(
+                colors: theme.gradient,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .opacity(highlighted ? 0.15 : 0.06)
+        }
+    }
+
+    @ViewBuilder
+    private var headerBackground: some View {
+        if let imageName = theme.reportBackgroundImage {
+            ZStack {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFill()
+
+                // 双层遮罩同时压低高光和繁复细节；整体调亮以看清背景图。
+                Color.black.opacity(theme.imageOverlayOpacity * 0.5)
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.18),
+                        Color.black.opacity(0.03),
+                        Color.black.opacity(0.16),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        } else {
+            cardBackground(highlighted: true)
         }
     }
 
@@ -74,27 +126,37 @@ struct CoachReportView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L("练习曲目"))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(theme.headerSecondaryForeground)
                     Text(report.piece.displayName)
                         .font(.title3).fontWeight(.semibold)
+                        .foregroundStyle(theme.headerForeground)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(L("演奏时长"))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(theme.headerSecondaryForeground)
                     Text(durationText)
                         .font(.title3).fontWeight(.semibold)
+                        .foregroundStyle(theme.headerForeground)
                         .monospacedDigit()
                 }
             }
 
             Divider()
+                .overlay(theme.headerSecondaryForeground.opacity(0.55))
 
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .stroke(scoreColor(report.overallScore).opacity(0.25), lineWidth: 8)
+                        .fill(Color.black.opacity(theme.reportBackgroundImage == nil ? 0 : 0.28))
+                    Circle()
+                        .stroke(
+                            theme.reportBackgroundImage == nil
+                                ? scoreColor(report.overallScore).opacity(0.25)
+                                : Color.white.opacity(0.30),
+                            lineWidth: 8
+                        )
                     Circle()
                         .trim(from: 0, to: CGFloat(report.overallScore / 100))
                         .stroke(scoreColor(report.overallScore), style: StrokeStyle(lineWidth: 8, lineCap: .round))
@@ -105,53 +167,33 @@ struct CoachReportView: View {
                             .foregroundStyle(scoreColor(report.overallScore))
                         Text(L("综合得分"))
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(theme.headerSecondaryForeground)
                     }
                 }
                 .frame(width: 96, height: 96)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(L("总体评价"))
-                        .font(.caption).fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                    Text(report.grade)
+                    Text(report.emotionalComment)
                         .font(.callout)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(theme.headerForeground)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            // 乐曲一句话介绍
-            Text(report.intro)
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            // 按当前曲目资料展示，已保存的报告也能读到更新后的中英文介绍。
+            Text(report.piece.introduction)
+                .font(.caption)
+                .foregroundStyle(theme.headerSecondaryForeground)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
-        .background(Color(.secondarySystemBackground))
+        .background(headerBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-    }
-
-    // MARK: - 情感把握（正面激励评价）
-
-    private var emotionalSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle(L("情感把握"))
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "heart.fill")
-                    .foregroundStyle(report.piece.theme.accent)
-                    .font(.title3)
-                    .frame(width: 28)
-                Text(report.emotionalComment)
-                    .font(.callout)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(theme.headerForeground.opacity(0.18), lineWidth: 1)
+        )
+        .shadow(color: theme.accent.opacity(0.16), radius: 10, y: 4)
     }
 
     // MARK: - 四维度得分
@@ -194,7 +236,7 @@ struct CoachReportView: View {
                 }
             }
             .padding(14)
-            .background(Color(.secondarySystemBackground))
+            .background(cardBackground())
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
@@ -257,7 +299,7 @@ struct CoachReportView: View {
                     }
                 }
                 .padding(14)
-                .background(Color(.secondarySystemBackground))
+                .background(cardBackground())
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
         }
@@ -293,7 +335,7 @@ struct CoachReportView: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground))
+                .background(cardBackground())
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
@@ -325,7 +367,7 @@ struct CoachReportView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground))
+                .background(cardBackground())
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
@@ -341,7 +383,7 @@ struct CoachReportView: View {
                     HStack(alignment: .top, spacing: 8) {
                         Text("\(idx + 1).")
                             .font(.callout).fontWeight(.bold)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(theme.accent)
                         Text(text)
                             .font(.callout)
                             .fixedSize(horizontal: false, vertical: true)
@@ -350,7 +392,7 @@ struct CoachReportView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemBackground))
+            .background(cardBackground())
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
@@ -360,7 +402,7 @@ struct CoachReportView: View {
     private func sectionTitle(_ text: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "chart.bar.fill")
-                .foregroundStyle(.blue)
+                .foregroundStyle(theme.accent)
                 .font(.caption)
             Text(text)
                 .font(.subheadline).fontWeight(.semibold)

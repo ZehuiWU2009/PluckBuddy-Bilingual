@@ -40,7 +40,7 @@ final class CoachReportStore: ObservableObject {
     }
 
     /// 达标曲目数量（去重）：同一曲目多次达标只计一次，
-    /// 用于「演奏家」分级成就（初/进阶/大师分别为 1 / 3 / 5 首）。
+    /// 用于「演奏家」分级成就（初/进阶/大师分别为 1 / 5 / 10 首）。
     var qualifiedPieceCount: Int { qualifiedPieces.count }
 
     private func load() {

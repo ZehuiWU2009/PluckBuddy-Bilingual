@@ -49,64 +49,36 @@ struct TechniqueCoachView: View {
                 displayEvaluation = evaluation
             }
         }
-        .navigationTitle(L("智能指法教练"))
-        .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $viewModel.report) { report in
             CoachReportView(report: report)
         }
         .toolbar {
-            // 练习曲目选择（顶部中间，分段控件）
-            ToolbarItem(placement: .principal) {
-                Picker("", selection: $viewModel.selectedPiece) {
-                    ForEach(PracticePiece.allCases) { piece in
-                        Text(piece.displayName).tag(piece)
-                    }
-                }
-                .pickerStyle(.menu)
-                .disabled(viewModel.isAnalyzing)
-            }
-
+            // 右上角：...⭕️ 图标菜单选择曲目（不显示曲目文字）
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    // 技法测试
-                    Section(L("快速测试技法")) {
+                    ForEach(PracticePiece.allCases) { piece in
                         Button {
-                            viewModel.setTechnique(.roll)
+                            viewModel.selectedPiece = piece
                         } label: {
-                            Label(L("轮指"), systemImage: "hand.tap.fill")
-                        }
-                        
-                        Button {
-                            viewModel.setTechnique(.sweep)
-                        } label: {
-                            Label(L("扫弦"), systemImage: "waveform.path")
-                        }
-                        
-                        Button {
-                            viewModel.setTechnique(.pluck)
-                        } label: {
-                            Label(L("弹挑"), systemImage: "hand.point.up.left.fill")
-                        }
-                        
-                        Button {
-                            viewModel.setTechnique(.unknown)
-                        } label: {
-                            Label(L("重置"), systemImage: "arrow.counterclockwise")
-                        }
-                    }
-                    
-                    // 滚动字幕测试
-                    Section {
-                        NavigationLink {
-                            ScrollingTextTestView()
-                        } label: {
-                            Label(L("滚动字幕测试"), systemImage: "text.badge.checkmark")
+                            if viewModel.selectedPiece == piece {
+                                Label(piece.displayName, systemImage: "checkmark")
+                            } else {
+                                Text(piece.displayName)
+                            }
                         }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .foregroundStyle(.secondary)
                 }
+                .disabled(viewModel.isAnalyzing)
+            }
+
+            // 中间：选中曲目名（取代导航标题），亮色显示，不用黑色
+            ToolbarItem(placement: .principal) {
+                Text(viewModel.selectedPiece.displayName)
+                    .font(.headline)
+                    .foregroundStyle(.white)
             }
         }
     }
@@ -274,7 +246,7 @@ struct TechniqueCoachView: View {
             .padding(10)
             .frame(height: 106)
         }
-        .frame(height: 218)  // 32(要求) + 1 + 78(上半) + 1 + 106(下半)
+        .frame(height: 230)  // 44(要求) + 1 + 78(上半) + 1 + 106(下半)
         .modifier(CoachPanelBackground())
         .padding(.horizontal)
     }
@@ -704,22 +676,22 @@ struct RequirementStripView: View {
     private var isPieceMode: Bool { !piece.hints.isEmpty }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             if isPieceMode {
                 Image(systemName: "music.note")
-                    .font(.system(size: 11))
+                    .font(.system(size: 15))
                     .foregroundStyle(piece.theme.accent)
             } else {
                 Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 11))
+                    .font(.system(size: 15))
                     .foregroundStyle(.yellow)
             }
 
             Text(items.isEmpty ? L("暂无要求") : items[safeIndex])
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(.white.opacity(0.92))
                 .lineLimit(1)
-                .minimumScaleFactor(0.9)
+                .minimumScaleFactor(0.85)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .id(safeIndex)
                 .transition(.opacity)
@@ -727,14 +699,14 @@ struct RequirementStripView: View {
 
             if items.count > 1 {
                 Text("\(safeIndex + 1)/\(items.count)")
-                    .font(.system(size: 11))
+                    .font(.system(size: 13))
                     .fontWeight(.medium)
                     .foregroundStyle(.white.opacity(0.6))
                     .monospacedDigit()
             }
         }
-        .padding(.horizontal, 12)
-        .frame(height: 32)
+        .padding(.horizontal, 14)
+        .frame(height: 44)
         .onReceive(tick) { _ in
             guard items.count > 1 else { return }
             index = (index + 1) % items.count

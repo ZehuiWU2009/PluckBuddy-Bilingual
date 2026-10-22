@@ -40,7 +40,7 @@ struct HomeView: View {
                             FeatureCard(
                                 icon: "🏃",
                                 title: L("弹挑跑步"),
-                                subtitle: L("节奏练习变成跑步游戏"),
+                                subtitle: L("弹挑练习变身跑步游戏"),
                                 color: .green
                             )
                         }
@@ -76,7 +76,7 @@ struct HomeView: View {
                             FeatureCard(
                                 icon: "🎥",
                                 title: L("智能指法教练"),
-                                subtitle: L("AI 实时分析你的弹奏姿势"),
+                                subtitle: L("AI 实时分析你的演奏质量"),
                                 color: .purple
                             )
                         }

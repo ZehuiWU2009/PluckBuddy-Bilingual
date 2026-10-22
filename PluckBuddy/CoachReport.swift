@@ -55,216 +55,128 @@ enum PracticePiece: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// 报告主题（渐变背景 + 点缀色），与乐曲气质匹配。
+    /// 以曲目意象配色：深色起笔、中色铺陈、浅色留白。
     var theme: PieceTheme {
         switch self {
-        case .etude:
+        case .etude: // 基本功：原有蓝色
             return PieceTheme(
-                gradient: [Color(red: 0.42, green: 0.52, blue: 0.92), Color(red: 0.28, green: 0.42, blue: 0.82)],
-                accent: .blue)
-        case .springRiver:
+                gradient: [
+                    Color(red: 107.0 / 255, green: 133.0 / 255, blue: 235.0 / 255),
+                    Color(red: 71.0 / 255, green: 94.0 / 255, blue: 184.0 / 255),
+                    Color(red: 221.0 / 255, green: 229.0 / 255, blue: 255.0 / 255),
+                ],
+                accent: Color(red: 80.0 / 255, green: 109.0 / 255, blue: 204.0 / 255),
+                headerForeground: .primary,
+                headerSecondaryForeground: .secondary)
+        case .springRiver: // 春江：江青、水雾、月白
             return PieceTheme(
-                gradient: [Color(red: 0.16, green: 0.52, blue: 0.62), Color(red: 0.30, green: 0.34, blue: 0.58)],
-                accent: Color(red: 0.25, green: 0.72, blue: 0.82))   // 月夜青蓝
-        case .ambush:
+                gradient: [
+                    Color(red: 36.0 / 255, green: 107.0 / 255, blue: 120.0 / 255),
+                    Color(red: 141.0 / 255, green: 184.0 / 255, blue: 186.0 / 255),
+                    Color(red: 243.0 / 255, green: 235.0 / 255, blue: 210.0 / 255),
+                ],
+                accent: Color(red: 54.0 / 255, green: 124.0 / 255, blue: 133.0 / 255),
+                reportBackgroundImage: "CoachSpringRiver")
+        case .ambush: // 十面：墨色、暗红、古铜
             return PieceTheme(
-                gradient: [Color(red: 0.86, green: 0.26, blue: 0.20), Color(red: 0.62, green: 0.16, blue: 0.20)],
-                accent: Color(red: 0.95, green: 0.72, blue: 0.25))    // 战火红金
-        case .kingUnarm:
+                gradient: [
+                    Color(red: 52.0 / 255, green: 46.0 / 255, blue: 55.0 / 255),
+                    Color(red: 152.0 / 255, green: 61.0 / 255, blue: 59.0 / 255),
+                    Color(red: 183.0 / 255, green: 149.0 / 255, blue: 97.0 / 255),
+                ],
+                accent: Color(red: 173.0 / 255, green: 81.0 / 255, blue: 66.0 / 255),
+                reportBackgroundImage: "CoachAmbush")
+        case .kingUnarm: // 霸王：墨紫、赭红、残阳
             return PieceTheme(
-                gradient: [Color(red: 0.48, green: 0.14, blue: 0.20), Color(red: 0.28, green: 0.10, blue: 0.18)],
-                accent: Color(red: 0.80, green: 0.52, blue: 0.32))    // 悲壮暗红铜
-        case .bigWaves:
+                gradient: [
+                    Color(red: 73.0 / 255, green: 51.0 / 255, blue: 73.0 / 255),
+                    Color(red: 131.0 / 255, green: 81.0 / 255, blue: 93.0 / 255),
+                    Color(red: 195.0 / 255, green: 146.0 / 255, blue: 118.0 / 255),
+                ],
+                accent: Color(red: 166.0 / 255, green: 108.0 / 255, blue: 118.0 / 255),
+                reportBackgroundImage: "CoachKingUnarm")
+        case .bigWaves: // 淘沙：深水、浪青、沙金
             return PieceTheme(
-                gradient: [Color(red: 0.10, green: 0.35, blue: 0.55), Color(red: 0.16, green: 0.30, blue: 0.48)],
-                accent: Color(red: 0.45, green: 0.75, blue: 0.88))    // 江青黛蓝
-        case .yangChun:
+                gradient: [
+                    Color(red: 36.0 / 255, green: 84.0 / 255, blue: 109.0 / 255),
+                    Color(red: 100.0 / 255, green: 139.0 / 255, blue: 153.0 / 255),
+                    Color(red: 195.0 / 255, green: 170.0 / 255, blue: 121.0 / 255),
+                ],
+                accent: Color(red: 66.0 / 255, green: 122.0 / 255, blue: 145.0 / 255),
+                reportBackgroundImage: "CoachBigWaves")
+        case .yangChun: // 阳春：春枝、嫩绿、雪白
             return PieceTheme(
-                gradient: [Color(red: 0.30, green: 0.62, blue: 0.42), Color(red: 0.22, green: 0.48, blue: 0.38)],
-                accent: Color(red: 0.55, green: 0.85, blue: 0.55))    // 春芽嫩绿
-        case .zhaoJun:
+                gradient: [
+                    Color(red: 82.0 / 255, green: 126.0 / 255, blue: 93.0 / 255),
+                    Color(red: 183.0 / 255, green: 208.0 / 255, blue: 173.0 / 255),
+                    Color(red: 244.0 / 255, green: 241.0 / 255, blue: 226.0 / 255),
+                ],
+                accent: Color(red: 89.0 / 255, green: 134.0 / 255, blue: 98.0 / 255),
+                reportBackgroundImage: "CoachYangChun",
+                imageOverlayOpacity: 0.58)
+        case .zhaoJun: // 昭君：塞外沙金、远山青灰
             return PieceTheme(
-                gradient: [Color(red: 0.62, green: 0.48, blue: 0.22), Color(red: 0.45, green: 0.32, blue: 0.18)],
-                accent: Color(red: 0.90, green: 0.70, blue: 0.35))    // 大漠沙金
-        case .pingSha:
+                gradient: [
+                    Color(red: 161.0 / 255, green: 133.0 / 255, blue: 87.0 / 255),
+                    Color(red: 189.0 / 255, green: 174.0 / 255, blue: 146.0 / 255),
+                    Color(red: 100.0 / 255, green: 126.0 / 255, blue: 145.0 / 255),
+                ],
+                accent: Color(red: 153.0 / 255, green: 119.0 / 255, blue: 70.0 / 255),
+                reportBackgroundImage: "CoachZhaoJun",
+                imageOverlayOpacity: 0.52)
+        case .pingSha: // 平沙：雾灰、秋水、芦苇
             return PieceTheme(
-                gradient: [Color(red: 0.45, green: 0.47, blue: 0.50), Color(red: 0.30, green: 0.32, blue: 0.36)],
-                accent: Color(red: 0.72, green: 0.78, blue: 0.80))    // 秋江灰青
-        case .lvYao:
+                gradient: [
+                    Color(red: 126.0 / 255, green: 134.0 / 255, blue: 127.0 / 255),
+                    Color(red: 188.0 / 255, green: 197.0 / 255, blue: 188.0 / 255),
+                    Color(red: 216.0 / 255, green: 202.0 / 255, blue: 170.0 / 255),
+                ],
+                accent: Color(red: 112.0 / 255, green: 124.0 / 255, blue: 105.0 / 255),
+                reportBackgroundImage: "CoachPingSha",
+                imageOverlayOpacity: 0.56)
+        case .lvYao: // 绿腰：唐风青绿、绢色、淡金
             return PieceTheme(
-                gradient: [Color(red: 0.55, green: 0.42, blue: 0.20), Color(red: 0.30, green: 0.38, blue: 0.30)],
-                accent: Color(red: 0.85, green: 0.68, blue: 0.30))    // 唐韵金绿
-        case .tashikuergan:
+                gradient: [
+                    Color(red: 39.0 / 255, green: 123.0 / 255, blue: 116.0 / 255),
+                    Color(red: 168.0 / 255, green: 191.0 / 255, blue: 158.0 / 255),
+                    Color(red: 207.0 / 255, green: 173.0 / 255, blue: 98.0 / 255),
+                ],
+                accent: Color(red: 143.0 / 255, green: 119.0 / 255, blue: 55.0 / 255),
+                reportBackgroundImage: "CoachLvYao",
+                imageOverlayOpacity: 0.50)
+        case .tashikuergan: // 塔什库尔干：晴空、雪峰、阳光
             return PieceTheme(
-                gradient: [Color(red: 0.95, green: 0.55, blue: 0.20), Color(red: 0.75, green: 0.30, blue: 0.18)],
-                accent: Color(red: 1.00, green: 0.78, blue: 0.35))    // 高原暖阳
-        case .caoyuan:
+                gradient: [
+                    Color(red: 54.0 / 255, green: 127.0 / 255, blue: 173.0 / 255),
+                    Color(red: 220.0 / 255, green: 234.0 / 255, blue: 241.0 / 255),
+                    Color(red: 227.0 / 255, green: 185.0 / 255, blue: 94.0 / 255),
+                ],
+                accent: Color(red: 59.0 / 255, green: 131.0 / 255, blue: 176.0 / 255),
+                reportBackgroundImage: "CoachTashikuergan",
+                imageOverlayOpacity: 0.58)
+        case .caoyuan: // 草原：草绿、远野、风雪
             return PieceTheme(
-                gradient: [Color(red: 0.20, green: 0.52, blue: 0.46), Color(red: 0.13, green: 0.38, blue: 0.40)],
-                accent: Color(red: 0.58, green: 0.86, blue: 0.66))    // 草原青绿
-        case .weiShui:
+                gradient: [
+                    Color(red: 56.0 / 255, green: 124.0 / 255, blue: 100.0 / 255),
+                    Color(red: 166.0 / 255, green: 195.0 / 255, blue: 177.0 / 255),
+                    Color(red: 236.0 / 255, green: 241.0 / 255, blue: 238.0 / 255),
+                ],
+                accent: Color(red: 64.0 / 255, green: 132.0 / 255, blue: 105.0 / 255),
+                reportBackgroundImage: "CoachCaoyuan",
+                imageOverlayOpacity: 0.54)
+        case .weiShui: // 渭水：黄土、河岸、渭水青
             return PieceTheme(
-                gradient: [Color(red: 0.62, green: 0.50, blue: 0.28), Color(red: 0.44, green: 0.34, blue: 0.22)],
-                accent: Color(red: 0.90, green: 0.72, blue: 0.42))    // 渭水暮金
+                gradient: [
+                    Color(red: 146.0 / 255, green: 108.0 / 255, blue: 75.0 / 255),
+                    Color(red: 198.0 / 255, green: 169.0 / 255, blue: 125.0 / 255),
+                    Color(red: 119.0 / 255, green: 153.0 / 255, blue: 150.0 / 255),
+                ],
+                accent: Color(red: 150.0 / 255, green: 116.0 / 255, blue: 73.0 / 255),
+                reportBackgroundImage: "CoachWeiShui",
+                imageOverlayOpacity: 0.54)
         }
     }
 
-    // MARK: - 选定乐曲后在教练界面展示的乐曲背景 / 历史 / 情感把握（指法基本功不展示）
-
-    // MARK: - 选定乐曲后在教练界面轮播的乐曲知识（指法基本功为空，轮播技法要求）
-
-    /// 乐曲知识提示：每首 8-12 条短句，由教练界面底部单行轮播逐条展示，
-    /// 不出现「背景介绍 / 历史故事」这类标题。内容覆盖曲目背景、历史源流、情感把握、
-    /// 诗词典故、结构与技法、传承与延伸等文化维度，体现 App 的文化传播属性。
-    var hints: [String] {
-        switch self {
-        case .etude:
-            return []
-        case .springRiver:
-            return [
-                L("文曲经典，写月夜春江的柔美深远"),
-                L("源于《夕阳箫鼓》，据张若虚诗改编"),
-                L("重在静与远，乐句如歌般流淌"),
-                L("张若虚「孤篇盖全唐」之作"),
-                L("推拉吟揉间，见江南水墨留白"),
-                L("轮指要匀，如月光层层铺开"),
-                L("1925 年大同乐会改编成独奏曲"),
-                L("中国十大名曲之一，常演不衰"),
-                L("慢板练气息，快板忌赶节奏"),
-                L("听此曲如泛舟江上，心随月远"),
-            ]
-        case .ambush:
-            return [
-                L("琵琶武曲，再现垓下之战的千军万马"),
-                L("见于清代华秋苹《琵琶谱》"),
-                L("重在势与对比，激战强奏、伏笔收弱"),
-                L("扫拂轮指相合，模拟鼓角呐喊"),
-                L("全曲自「列营」至「得胜」分十余段"),
-                L("与《霸王卸甲》同题材而视角相反"),
-                L("武曲最练手腕爆发力与控制力"),
-                L("节奏稳中求进，勿越奏越快"),
-                L("琵琶能奏金戈铁马，也诉儿女情长"),
-                L("听此曲如临古战场，心随鼓急"),
-            ]
-        case .kingUnarm:
-            return [
-                L("同写垓下之战，取项羽视角的悲壮"),
-                L("同载《琵琶谱》，较《十面埋伏》内敛"),
-                L("重在情与层次，以强弱起伏刻画悲怆"),
-                L("「卸甲」一节写英雄解甲之痛"),
-                L("虞兮虞兮奈若何的千古绝唱"),
-                L("扫拂宜刚柔相济，悲而不嚎"),
-                L("慢板气息要深，留白处最动人"),
-                L("杜牧叹「江东子弟多才俊」"),
-                L("练此曲如读史，技进一层情进一层"),
-                L("听此曲如见末路英雄，心生悲悯"),
-            ]
-        case .bigWaves:
-            return [
-                L("阿炳传谱，开阔深沉，如江水奔涌"),
-                L("经杨荫浏等录音整理后流传"),
-                L("重在沉与远，长轮均匀、起伏舒缓"),
-                L("华彦钧即民间艺人「瞎子阿炳」"),
-                L("与《二泉映月》同出一位大家"),
-                L("长轮绵密，如江水拍岸不绝"),
-                L("文曲亦有豪气，沉中见阔"),
-                L("1950 年抢救性录音方得传世"),
-                L("练此曲可悟「少即是多」之理"),
-                L("听此曲如立江边，潮声入心"),
-            ]
-        case .yangChun:
-            return [
-                L("古曲清新明快，写冬去春来的明朗"),
-                L("典出《宋玉对楚王问》，传谱众多"),
-                L("重在明与活，弹挑干净、不焦不躁"),
-                L("原喻高雅艺术，今为琵琶名曲"),
-                L("弹挑半轮交替，如溪水跳石"),
-                L("节奏明快，最练右手独立性"),
-                L("《白雪》与《阳春》同源分流"),
-                L("俗语「下里巴人」正出自同典"),
-                L("由慢入快，层次分明才动听"),
-                L("听此曲如沐春风，耳目一新"),
-            ]
-        case .zhaoJun:
-            return [
-                L("写王昭君远嫁匈奴，曲调哀婉深沉"),
-                L("故事见《汉书》，后世多形式演绎"),
-                L("重在怨与忍，推拉吟揉、气息要深"),
-                L("杜甫有「千载琵琶作胡语」之句"),
-                L("推拉音技法最能诉离愁别恨"),
-                L("慢板如叙往事，一字一叹"),
-                L("昭君故事入诗入画入乐逾千年"),
-                L("委曲含情，忌直白宣泄"),
-                L("练此曲如读一首叙事长诗"),
-                L("听此曲如见塞北孤影，令人动容"),
-            ]
-        case .pingSha:
-            return [
-                L("借秋江雁落之景，寓静远之趣"),
-                L("原为古琴名曲，后移植为琵琶"),
-                L("重在静与淡，长音轻柔、不赶节奏"),
-                L("琴人崇尚的「静气」尽在此曲"),
-                L("长音余韵，如雁阵渐远"),
-                L("静弹最难，音少而意不能少"),
-                L("琴琵琶移植对话的典范之作"),
-                L("弹此曲宜心静，急不得"),
-                L("由动入静，是演奏也是修行"),
-                L("听此曲如立秋江，天地辽阔"),
-            ]
-        case .lvYao:
-            return [
-                L("以唐代歌舞曲「绿腰」为素材创作"),
-                L("「绿腰」为唐软舞名曲，见唐诗乐志"),
-                L("重在韵与舞，旋律流畅、古韵含蓄"),
-                L("「绿腰」又名「六幺」，唐宋风行"),
-                L("元稹白居易诗中屡见「六幺」"),
-                L("羽调式音色，别于一般宫调"),
-                L("今人据古素材作曲，古韵新声"),
-                L("演奏宜带唐代乐舞的雍容气度"),
-                L("快板如舞袖回旋，慢板如凝神"),
-                L("听此曲如回大唐，观一场软舞"),
-            ]
-        case .tashikuergan:
-            return [
-                L("塔吉克风，写帕米尔高原的阳光歌舞"),
-                L("原为小提琴曲，吸收塔吉克民歌"),
-                L("重在烈与舞，扫拂饱满、切分清楚"),
-                L("帕米尔高原上的塔吉克族歌舞"),
-                L("新疆民歌常伴手鼓起舞"),
-                L("七拍子与附点，奏出舞蹈律动"),
-                L("移植曲显琵琶音色可塑性"),
-                L("由弱至强，如日出渐暖高原"),
-                L("音域跨度大，换把需干净"),
-                L("听此曲如赴高原，与民同舞"),
-            ]
-        case .caoyuan:
-            return [
-                L("琵琶协奏曲，写草原英雄小姐妹"),
-                L("1973 年吴祖强王燕樵刘德海作曲"),
-                L("长轮绵绵，如风雪漫天呼啸"),
-                L("小姐妹护羊群，与暴风雪搏斗"),
-                L("琵琶与乐队协奏的开山之作"),
-                L("「草原牧歌」主题宽广深情"),
-                L("由静到动，层次一层层推进"),
-                L("轮指扫弦并举，摹风号雪舞"),
-                L("故事原型是草原上的小姐妹"),
-                L("听此曲如见草原风雪中的青春"),
-            ]
-        case .weiShui:
-            return [
-                L("任鸿翔作曲，写秦地渭水悠悠"),
-                L("1984 年创作的西北风情名曲"),
-                L("重在情与韵，推拉吟揉诉乡愁"),
-                L("渭水汤汤，姜尚曾垂钓于此"),
-                L("碗碗腔韵味，秦声激越深沉"),
-                L("慢板如叙往事，情深意长"),
-                L("快板热烈奔放，见西北豪气"),
-                L("一水连古今，乡愁越千年"),
-                L("吟揉之间，听黄土高原的风"),
-                L("听此曲如立渭水边，思接千载"),
-            ]
-        }
-    }
 }
 
 // 兼容更名前持久化的历史报告：旧 rawValue「练习曲」统一映射为 etude。
@@ -283,6 +195,26 @@ extension PracticePiece {
 struct PieceTheme {
     let gradient: [Color]
     let accent: Color
+    let reportBackgroundImage: String?
+    let headerForeground: Color
+    let headerSecondaryForeground: Color
+    let imageOverlayOpacity: Double
+
+    init(
+        gradient: [Color],
+        accent: Color,
+        reportBackgroundImage: String? = nil,
+        headerForeground: Color = Color(red: 1.0, green: 0.98, blue: 0.92),
+        headerSecondaryForeground: Color = Color.white.opacity(0.82),
+        imageOverlayOpacity: Double = 0.46
+    ) {
+        self.gradient = gradient
+        self.accent = accent
+        self.reportBackgroundImage = reportBackgroundImage
+        self.headerForeground = headerForeground
+        self.headerSecondaryForeground = headerSecondaryForeground
+        self.imageOverlayOpacity = imageOverlayOpacity
+    }
 }
 
 // MARK: - 报告数据模型
@@ -840,44 +772,32 @@ final class SessionAudioAnalyzer {
         }
 
         // ===== 首部乐曲介绍 + 情感把握正面激励评价 =====
-        let intro: String
+        let intro = piece.introduction
         let emotionalComment: String
         switch piece {
         case .etude:
-            intro = L("指法基本功是技法打磨的基石，专注每一个音符的干净与稳定。")
             emotionalComment = L("你对基础技法的踏实与稳定令人欣喜，保持这份专注，进步会显而易见。")
         case .springRiver:
-            intro = L("《春江花月夜》以柔美旋律描绘月夜春江，重在如歌的连贯与气韵。")
             emotionalComment = L("你用连贯的乐句传递出月夜的静谧与流动，已初见意境；继续用心去“唱”这根弦，情感会更饱满。")
         case .ambush:
-            intro = L("《十面埋伏》气势磅礴，再现楚汉垓下之战的紧张与锋芒。")
             emotionalComment = L("你在激越处爆发张力、在收束处懂得克制，已触摸到这首武曲的精气神，气势越来越足。")
         case .kingUnarm:
-            intro = L("《霸王卸甲》同写楚汉相争，却从项羽视角刻画英雄末路的苍凉与悲壮。")
             emotionalComment = L("你在慢板里注入了难得的沉静与悲悯，把英雄末路的情绪慢慢讲清楚了，这份共情很打动人。")
         case .bigWaves:
-            intro = L("《大浪淘沙》开阔深沉，如江水奔涌，意在沉静中见深远。")
             emotionalComment = L("你在舒缓的长音里守住了难得的沉静，声音越来越有江水的深度，这份定力很可贵。")
         case .yangChun:
-            intro = L("《阳春白雪》清新明快，旋律如春风拂面，贵在干净流畅。")
             emotionalComment = L("你的演奏明亮而不浮躁，弹挑干净、气息轻盈，把春天的清爽劲儿带出来了。")
         case .zhaoJun:
-            intro = L("《昭君出塞》哀婉深沉，写去国怀乡之愁，贵在含蓄内在。")
             emotionalComment = L("你在推拉吟揉间注入了细腻的情绪，慢板里的牵挂与不舍让人动容，很有感染力。")
         case .pingSha:
-            intro = L("《平沙落雁》清幽淡远，写秋江暮霭、雁落沙平之境。")
             emotionalComment = L("你肯在音乐里「留白」，让声音静下来，这份淡远从容正是这首曲子的味道。")
         case .lvYao:
-            intro = L("《新番羽调绿腰》富丽典雅，以唐韵乐舞为意，贵在流畅与气韵。")
             emotionalComment = L("你的乐句流畅而有分寸，古韵里带着生动的舞意，气度越来越好。")
         case .tashikuergan:
-            intro = L("《阳光照耀着塔什库尔干》热烈奔放，写帕米尔高原的阳光与歌舞。")
             emotionalComment = L("你的演奏像高原的阳光一样透亮，节奏向前、情绪饱满，听得出心里的那份火热。")
         case .caoyuan:
-            intro = L("《草原小姐妹》是琵琶协奏曲名作，写草原姐妹顶风冒雪守护羊群的英勇故事。")
             emotionalComment = L("你在风雪般的急奏里守住了力量与控制的平衡，把小姐妹的勇敢一点点奏出来了，很有画面感。")
         case .weiShui:
-            intro = L("《渭水情》以西北秦地风格写对渭水与故乡的眷恋，深情而豪迈。")
             emotionalComment = L("你的吟揉里带着黄土高原的厚意，慢板处的乡愁真挚动人，越弹越有味道了。")
         }
 
