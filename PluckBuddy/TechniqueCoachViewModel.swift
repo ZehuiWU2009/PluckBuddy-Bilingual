@@ -26,6 +26,11 @@ class TechniqueCoachViewModel: ObservableObject {
     /// 当前手部姿势数据
     @Published var handPose: HandPoseData?
     
+    /// 是否检测到用户左手（用于界面显示双手识别状态）
+    @Published var leftHandDetected: Bool = false
+    /// 是否检测到用户右手（指法分类以右手为准）
+    @Published var rightHandDetected: Bool = false
+    
     /// 姿势评估结果
     @Published var currentEvaluation: PostureEvaluation?
     
@@ -182,6 +187,8 @@ class TechniqueCoachViewModel: ObservableObject {
         // 重置状态
         detectedTechnique = .unknown
         handPose = nil
+        leftHandDetected = false
+        rightHandDetected = false
         currentEvaluation = nil
         statusMessage = L("分析已停止")
         
@@ -194,29 +201,40 @@ class TechniqueCoachViewModel: ObservableObject {
     
     /// 处理每一帧视频
     private func processFrame(_ pixelBuffer: CVPixelBuffer) async {
-        // 1. 检测手部姿势
-        guard let pose = await handPoseAnalyzer.analyzeHand(in: pixelBuffer) else {
+        // 1. 检测双手（最多 2 只）
+        let hands = await handPoseAnalyzer.analyzeHands(in: pixelBuffer)
+        guard !hands.isEmpty else {
             // 未检测到手部
             if detectedTechnique != .unknown {
-                // 如果之前检测到技法，现在丢失了
                 print("⚠️ 手部检测丢失")
             }
             statusMessage = L("未检测到手部")
             skeletonOverlayImage = nil  // 清空骨骼图像
+            leftHandDetected = false
+            rightHandDetected = false
             return
         }
-        
-        handPose = pose
-        
-        // ✨ 生成手部骨骼覆盖图像
-        generateSkeletonOverlay(from: pose, pixelBuffer: pixelBuffer)
-        
-        // 2. 提取运动特征
-        let features = motionFeatureExtractor.extractFeatures(from: pose)
-        
+
+        // 记录左右手识别状态（供界面显示双手均已检测）
+        leftHandDetected = hands.contains { $0.hand == .left }
+        rightHandDetected = hands.contains { $0.hand == .right }
+
+        // ✨ 生成双手骨骼覆盖图像（双手都画）
+        generateSkeletonOverlay(from: hands, pixelBuffer: pixelBuffer)
+
+        // 指法分类以右手为准（用户明确要求：指法分类依据右手）
+        guard let rightHand = hands.first(where: { $0.hand == .right }) else {
+            statusMessage = L("未检测到右手（指法分析依据右手）")
+            return
+        }
+        handPose = rightHand
+
+        // 2. 提取右手运动特征
+        let features = motionFeatureExtractor.extractFeatures(from: rightHand)
+
         // 3. 分类技法
         let technique = techniqueClassifier.classify(features: features)
-        
+
         // 3.5 音频侧门控：Core ML 声音分类确认当前确实是琵琶声，才把视觉判定落为技法
         // 手上动作像弹琴、但听感不是琵琶（例如说话、其它乐器、环境噪声）时不给评分
         if hasSoundResult, !isPipaSoundDetected {
@@ -228,7 +246,7 @@ class TechniqueCoachViewModel: ObservableObject {
             statusMessage = L("未听到琵琶声（") + L(soundSceneLabel) + L("）")
             return
         }
-        
+
         // 3.6 技法去抖：连续多帧判定一致才采纳，否则沿用当前已确认的技法
         if technique == pendingTechnique {
             pendingTechniqueFrames += 1
@@ -238,7 +256,7 @@ class TechniqueCoachViewModel: ObservableObject {
         }
         let isStable = pendingTechniqueFrames >= techniqueStableFrames
         let stableTechnique = isStable ? pendingTechnique : detectedTechnique
-        
+
         // 技法改变时打印日志
         if stableTechnique != .unknown && stableTechnique != detectedTechnique {
             print("🎯 检测到技法: \(stableTechnique.rawValue)")
@@ -247,8 +265,8 @@ class TechniqueCoachViewModel: ObservableObject {
             print("⚠️ 技法识别丢失")
             detectedTechnique = .unknown
         }
-        
-        // 4. 评估姿势
+
+        // 4. 评估姿势（基于右手）
         if stableTechnique != .unknown {
             currentEvaluation = evaluatePosture(
                 technique: stableTechnique,
@@ -264,50 +282,58 @@ class TechniqueCoachViewModel: ObservableObject {
     }
     
     // MARK: - Skeleton Overlay Generation
-    
-    /// 生成手部骨骼覆盖图像
-    private func generateSkeletonOverlay(from pose: HandPoseData, pixelBuffer: CVPixelBuffer) {
-        // 获取图像尺寸
+
+    /// 生成双手骨骼覆盖图像（每只手按左右用不同颜色，并在手腕处标注「左 / 右」）
+    private func generateSkeletonOverlay(from hands: [HandPoseData], pixelBuffer: CVPixelBuffer) {
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
         let imageSize = CGSize(width: width, height: height)
 
-        // 完整手部骨架：21 个关键点 + 5 条指骨 + 手掌
-        skeletonOverlayImage = drawFullHandSkeleton(
-            pose: pose,
-            imageSize: imageSize
-        )
+        skeletonOverlayImage = drawHandsSkeleton(hands: hands, imageSize: imageSize)
     }
 
-    /// 绘制完整手部骨架（21 个关键点 + 指骨连线 + 手掌连线）
-    /// - 5 指尖：彩色大圆（与旧版一致）
-    /// - 手腕：蓝色大圆
-    /// - 15 个中间关节（CMC/MP/IP/MCP/PIP/DIP）：白色小圆
-    /// - 5 条指骨连线（CMC/MCP → MP/PIP → IP/DIP → Tip）
-    /// - 手掌 5 条连线（wrist → 各指 MCP/CMC）
-    private func drawFullHandSkeleton(pose: HandPoseData, imageSize: CGSize) -> UIImage? {
+    /// 在单个绘图上下文里画出所有被检测到的手
+    private func drawHandsSkeleton(hands: [HandPoseData], imageSize: CGSize) -> UIImage? {
         UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
         guard let context = UIGraphicsGetCurrentContext() else {
             return nil
         }
 
-        context.setStrokeColor(UIColor.systemPink.cgColor)
-        context.setLineWidth(2.5)
         context.setLineCap(.round)
         context.setLineJoin(.round)
 
-        // 在 pose.keypoints 里按名字查坐标（取 21 点全集中的任意点）
+        for pose in hands {
+            // 右手用粉、左手用青，便于区分用户左右手
+            let stroke = pose.hand == .right ? UIColor.systemPink : UIColor.systemTeal
+            drawOneHandSkeleton(pose: pose, context: context, imageSize: imageSize, stroke: stroke)
+        }
+
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+
+    /// 画出单只手的骨架、指尖与手腕，并在手腕旁标注「左 / 右」
+    private func drawOneHandSkeleton(
+        pose: HandPoseData,
+        context: CGContext,
+        imageSize: CGSize,
+        stroke: UIColor
+    ) {
+        context.setStrokeColor(stroke.cgColor)
+        context.setLineWidth(2.5)
+
         func findPoint(_ name: String) -> CGPoint? {
             pose.keypoints.first(where: { $0.name == name })?.location
         }
 
         // 1) 5 条指骨连线（每个手指 4 个关节连成一根）
         let fingerBones: [(String, String, String, String)] = [
-            ("thumbCMC",   "thumbMP",   "thumbIP",   "thumbTip"),     // 拇指
-            ("indexMCP",   "indexPIP",  "indexDIP",  "indexTip"),     // 食指
-            ("middleMCP",  "middlePIP", "middleDIP", "middleTip"),    // 中指
-            ("ringMCP",    "ringPIP",   "ringDIP",   "ringTip"),      // 无名指
-            ("littleMCP",  "littlePIP", "littleDIP", "littleTip"),    // 小指
+            ("thumbCMC",   "thumbMP",   "thumbIP",   "thumbTip"),
+            ("indexMCP",   "indexPIP",  "indexDIP",  "indexTip"),
+            ("middleMCP",  "middlePIP", "middleDIP", "middleTip"),
+            ("ringMCP",    "ringPIP",   "ringDIP",   "ringTip"),
+            ("littleMCP",  "littlePIP", "littleDIP", "littleTip"),
         ]
         for (a, b, c, d) in fingerBones {
             let raw = [findPoint(a), findPoint(b), findPoint(c), findPoint(d)]
@@ -351,9 +377,9 @@ class TechniqueCoachViewModel: ObservableObject {
             }
         }
 
-        // 4) 手腕蓝色圆
+        // 4) 手腕：用本手配色圆（左手青 / 右手粉），直观区分左右
         if let wristRaw = findPoint("wrist") {
-            drawCircle(at: wristRaw, context: context, imageSize: imageSize, color: .systemBlue, radius: 8)
+            drawCircle(at: wristRaw, context: context, imageSize: imageSize, color: stroke, radius: 8)
         }
 
         // 5) 15 个中间关节白色小圆（CMC / MP / IP / MCP / PIP / DIP）
@@ -371,9 +397,19 @@ class TechniqueCoachViewModel: ObservableObject {
             }
         }
 
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return image
+        // 6) 在手腕旁标注「左 / 右」
+        if let wristRaw = findPoint("wrist") {
+            let ui = convertVisionPointToUIKit(wristRaw, imageSize: imageSize)
+            let label = pose.hand == .right ? "右" : "左"
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 24),
+                .foregroundColor: stroke
+            ]
+            (label as NSString).draw(
+                at: CGPoint(x: ui.x + 14, y: ui.y - 26),
+                withAttributes: attrs
+            )
+        }
     }
     
     /// 将 Vision 坐标系转换为 UIKit 坐标系
@@ -646,6 +682,8 @@ class TechniqueCoachViewModel: ObservableObject {
 
 struct HandPoseData {
     let timestamp: Date
+    /// 这只手是用户的左（.left）还是右（.right）手
+    let hand: HandChirality
     let thumbTip: CGPoint?
     let indexTip: CGPoint?
     let middleTip: CGPoint?
@@ -710,46 +748,39 @@ struct EvaluationAspect {
 class HandPoseAnalyzer {
     private let extractor = HandPoseExtractor()
     
-    func analyzeHand(in pixelBuffer: CVPixelBuffer) async -> HandPoseData? {
-        // 使用 Vision 框架检测手部关键点
-        guard let keypoints = try? await extractor.extractKeypoints(from: pixelBuffer),
-              !keypoints.isEmpty else {
+    /// 分析视频帧中的所有手，返回每只手的 HandPoseData（含左右标记）
+    func analyzeHands(in pixelBuffer: CVPixelBuffer) async -> [HandPoseData] {
+        // 使用 Vision 框架检测手部关键点（最多 2 只手）
+        guard let hands = try? await extractor.extractHands(from: pixelBuffer),
+              !hands.isEmpty else {
             print("⚠️ 未检测到手部关键点")  // 调试日志
-            return nil
+            return []
         }
-        
-        print("✅ 检测到 \(keypoints.count) 个关键点")  // 调试日志
-        
-        // 提取特定手指尖端位置
-        let thumbTip = keypoints.first(where: { $0.name.contains("thumbTip") })?.location
-        let indexTip = keypoints.first(where: { $0.name.contains("indexTip") })?.location
-        let middleTip = keypoints.first(where: { $0.name.contains("middleTip") })?.location
-        let ringTip = keypoints.first(where: { $0.name.contains("ringTip") })?.location
-        let littleTip = keypoints.first(where: { $0.name.contains("littleTip") })?.location
-        let wrist = keypoints.first(where: { $0.name.contains("wrist") })?.location
-        
-        // 调试：打印找到的关键点
-        if thumbTip != nil { print("  ✓ 找到拇指") }
-        if indexTip != nil { print("  ✓ 找到食指") }
-        if middleTip != nil { print("  ✓ 找到中指") }
-        if ringTip != nil { print("  ✓ 找到无名指") }
-        if littleTip != nil { print("  ✓ 找到小指") }
-        if wrist != nil { print("  ✓ 找到手腕") }
-        
-        // 计算平均置信度
-        let avgConfidence = Float(keypoints.map { $0.confidence }.reduce(0, +) / Double(keypoints.count))
-        
-        return HandPoseData(
-            timestamp: Date(),
-            thumbTip: thumbTip,
-            indexTip: indexTip,
-            middleTip: middleTip,
-            ringTip: ringTip,
-            littleTip: littleTip,
-            wrist: wrist,
-            keypoints: keypoints,
-            confidence: avgConfidence
-        )
+
+        return hands.map { detected in
+            let kp = detected.keypoints
+            let thumbTip = kp.first(where: { $0.name == "thumbTip" })?.location
+            let indexTip = kp.first(where: { $0.name == "indexTip" })?.location
+            let middleTip = kp.first(where: { $0.name == "middleTip" })?.location
+            let ringTip = kp.first(where: { $0.name == "ringTip" })?.location
+            let littleTip = kp.first(where: { $0.name == "littleTip" })?.location
+            let wrist = kp.first(where: { $0.name == "wrist" })?.location
+
+            let avgConfidence = Float(kp.map { $0.confidence }.reduce(0, +) / Double(kp.count))
+
+            return HandPoseData(
+                timestamp: Date(),
+                hand: detected.chirality,
+                thumbTip: thumbTip,
+                indexTip: indexTip,
+                middleTip: middleTip,
+                ringTip: ringTip,
+                littleTip: littleTip,
+                wrist: wrist,
+                keypoints: kp,
+                confidence: avgConfidence
+            )
+        }
     }
 }
 

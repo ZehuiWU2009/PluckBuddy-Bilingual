@@ -854,3 +854,9 @@
 "涉及曲目" = "Pieces Covered";
 "达标曲目" = "Qualified Pieces";
 "还没有智能指法教练的评价报告" = "No Technique Coach evaluation reports yet";
+
+/* 2026-10-22 双手检测：左右手识别状态徽标与提示 */
+"左手" = "Left hand";
+"右手" = "Right hand";
+"指法分析" = "Technique analysis";
+"未检测到右手（指法分析依据右手）" = "Right hand not detected (technique analysis uses the right hand)";

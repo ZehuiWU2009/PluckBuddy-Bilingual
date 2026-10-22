@@ -34,37 +34,49 @@ class HandPoseExtractor {
     
     // MARK: - Public Methods
     
-    /// 从视频帧中提取手部关键点
+    /// 从视频帧中提取所有检测到的手（最多 2 只），并为每只手标记用户的真实左右手。
     /// - Parameter buffer: 视频帧缓冲区
-    /// - Returns: 关键点数组（每个点包含 x, y 坐标和置信度）
-    func extractKeypoints(from buffer: CVPixelBuffer) async throws -> [HandKeypoint] {
+    /// - Returns: 每只手的关键点数组（含左右标记）
+    func extractHands(from buffer: CVPixelBuffer) async throws -> [DetectedHand] {
         let handler = VNImageRequestHandler(cvPixelBuffer: buffer, options: [:])
         try handler.perform([handPoseRequest])
-        
+
         guard let observations = handPoseRequest.results,
               !observations.isEmpty else {
             // 未检测到手部，返回空数组
             return []
         }
-        
-        // 提取第一只手的关键点（通常是右手）
-        let firstHand = observations.first!
-        var keypoints: [HandKeypoint] = []
-        
-        for jointName in jointNames {
-            if let point = try? firstHand.recognizedPoint(jointName) {
-                // 使用更简洁的关键点名称（例如："wrist", "thumbTip" 等）
-                let simpleName = getSimpleName(for: jointName)
-                keypoints.append(HandKeypoint(
-                    name: simpleName,
-                    location: point.location,
-                    confidence: Double(point.confidence)
-                ))
+
+        // 遍历 Vision 检测到的每只手（前置摄像头已镜像，左右需按 videoIsMirrored 翻转）
+        return observations.compactMap { observation -> DetectedHand? in
+            var keypoints: [HandKeypoint] = []
+            for jointName in jointNames {
+                if let point = try? observation.recognizedPoint(jointName) {
+                    keypoints.append(HandKeypoint(
+                        name: getSimpleName(for: jointName),
+                        location: point.location,
+                        confidence: Double(point.confidence)
+                    ))
+                }
             }
+            guard !keypoints.isEmpty else { return nil }
+            let chirality = Self.mapToUserHand(observation.chirality)
+            print("✅ 检测到 \(keypoints.count) 个关键点（\(chirality == .left ? "左手" : "右手")）")
+            return DetectedHand(chirality: chirality, keypoints: keypoints)
         }
-        
-        print("✅ 检测到 \(keypoints.count) 个关键点")  // 调试日志
-        return keypoints
+    }
+
+    /// 摄像头为前置且开启镜像（isVideoMirrored=true），Vision 在镜像缓冲里看到的
+    /// 「左手」实际是真实用户的右手，故此处翻转一次。若真机实测左右相反，改 false 即可。
+    private static let videoIsMirrored = true
+
+    /// 把 Vision 报告的左右手翻转到用户的真实左右手
+    private static func mapToUserHand(_ chirality: VNChirality) -> HandChirality {
+        switch chirality {
+        case .unknown: return .right  // 识别不出左右时按右手处理（指法分类以右手为准）
+        case .left:  return videoIsMirrored ? HandChirality.right : HandChirality.left
+        case .right: return videoIsMirrored ? HandChirality.left : HandChirality.right
+        }
     }
     
     /// 获取关键点的简化名称
@@ -129,6 +141,20 @@ class HandPoseExtractor {
             )
         }
     }
+}
+
+// MARK: - 左右手与单手结果
+
+/// 用户真实左右手（已根据摄像头镜像做翻转校正）
+enum HandChirality: String, CaseIterable {
+    case left
+    case right
+}
+
+/// 单只被检测到的手：带左右标记 + 21 个关键点
+struct DetectedHand {
+    let chirality: HandChirality
+    let keypoints: [HandKeypoint]
 }
 
 // MARK: - Data Structures

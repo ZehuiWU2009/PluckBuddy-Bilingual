@@ -129,7 +129,37 @@ struct TechniqueCoachView: View {
                     )
             }
         }
+        .overlay(alignment: .bottom) {
+            if viewModel.isAnalyzing {
+                HStack(spacing: 10) {
+                    handBadge(L("左手"), detected: viewModel.leftHandDetected, color: .teal)
+                    handBadge(L("右手"), detected: viewModel.rightHandDetected, color: .pink, sub: L("指法分析"))
+                }
+                .padding(6)
+            }
+        }
         .padding(.horizontal)
+    }
+
+    /// 双手识别状态小徽标
+    private func handBadge(_ title: String, detected: Bool, color: Color, sub: String? = nil) -> some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(detected ? color : .white.opacity(0.4))
+            if let sub {
+                Text(sub)
+                    .font(.system(size: 9))
+                    .foregroundStyle(detected ? color.opacity(0.85) : .white.opacity(0.3))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            Capsule()
+                .fill(detected ? color.opacity(0.18) : Color.white.opacity(0.08))
+                .overlay(Capsule().stroke(detected ? color : .white.opacity(0.2), lineWidth: 1))
+        )
     }
     
     private var combinedEvaluationPanel: some View {
