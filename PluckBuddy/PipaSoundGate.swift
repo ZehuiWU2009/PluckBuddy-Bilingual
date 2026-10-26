@@ -206,11 +206,17 @@ final class PipaSoundGate: ObservableObject, @unchecked Sendable {
 
     /// 「最近一次判定是否落在『琵琶声』有效窗口内」。默认 0.5 秒，调音音高判定时调用。
     /// - Parameter window: 判定窗口长度，默认 0.5 秒
-    /// - Returns: 模型加载失败时返回 true（降级为全放行），否则按 isPipa + lastDetectedAt 综合决定
+    /// - Returns: 模型加载失败时返回 true（降级为全放行），否则只要「窗口内曾判为琵琶」即放行。
+    ///
+    /// ⚠️ 关键语义：只检查 `lastDetectedAt`，不要再加 `isPipa` 当前值的约束。
+    /// 判门推理是重叠窗口（约每 0.5s 一次），真琵琶声在临界概率附近会抖动，
+    /// 某一帧被抖成 `isPipa = false` 时若还要求「当前仍为 pipa」就会把音高分析反复掐断，
+    /// 导致「顶部显示已检测到琵琶声、但音高三角形几乎不出现」。正确做法是：
+    /// 只要最近一次 `lastDetectedAt` 落在窗口内（即最近一直在听到琵琶），就持续放行音高分析。
     func isPipaRecent(within window: TimeInterval = 0.5) -> Bool {
         guard isAvailable else { return true } // 模型不可用 → 全放行
         guard let t = lastDetectedAt else { return false }
-        return isPipa && Date().timeIntervalSince(t) <= window
+        return Date().timeIntervalSince(t) <= window
     }
 
     /// 重置内部状态（停止练习时调用，避免下次开局前残留上一次的「最近判定」）

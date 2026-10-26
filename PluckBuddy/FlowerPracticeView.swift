@@ -262,9 +262,13 @@ struct FlowerView: View {
             // 花瓣
             ForEach(0..<8) { index in
                 if index < petalCount {
+                    // 花瓣整体尺寸与花心同步由 growth 驱动（保证同步长大、比例协调）。
+                    // 均匀度 symmetry 只做 0.8~1.0 的轻微饱满度微调，不再压缩整体大小，
+                    // 否则 growth 虽在增大、花瓣却被 symmetry(<1) 压小，花心大花瓣小的比例失调。
+                    let petalScale = growth * (0.8 + 0.2 * symmetry)
                     Petal(
                         rotation: Double(index) * 45 + rotationAngle,
-                        scale: growth * symmetry,
+                        scale: petalScale,
                         color: petalColor,
                         pulseCounter: pulseCounter // ✨ 传递脉冲计数器
                     )

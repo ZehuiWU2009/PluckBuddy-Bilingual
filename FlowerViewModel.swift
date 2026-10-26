@@ -35,6 +35,10 @@ class FlowerViewModel: ObservableObject {
     @Published var lastSequenceQuality: RollSequence.Quality? // 最近完成序列的质量
     @Published var pulseCounter: Int = 0 // ✨ 新增：花瓣脉冲计数器
     
+    // 花朵循环状态：每长满一朵即归零重长，形成「生长→绽放→归零」的持续节奏
+    private var flowerNotes: Int = 0        // 当前这朵花累计的音符数（区别于全局 rollCount）
+    private var flowerBlooming: Bool = false // 是否正处于「绽放-归零」过渡期
+    
     // ✨ 新增：节拍器
     let metronome = MetronomeManager()
     
@@ -269,25 +273,28 @@ class FlowerViewModel: ObservableObject {
         
         score += bonusScore
         
-        // 更新花朵属性
+        // 更新花朵属性（亮度随速度、对称随均匀度）
         updateFlowerAttributes()
-        
-        // 特殊反馈
-        if sequence.quality == .excellent {
-            // 优秀的轮指让花朵完全绽放
-            print("   ✨ 触发花朵绽放动画！")
-            triggerFlowerBloom()
-        }
     }
     
     // MARK: - Flower Animation
     private func updateFlowerGrowth() {
-        // 每个音符增加生长进度
-        let growthPerNote = 1.0 / Double(maxPetals * notesPerPetal)
-        flowerGrowth = min(1.0, flowerGrowth + growthPerNote)
+        // 统计当前这朵花累计的音符数
+        flowerNotes += 1
         
-        // 计算花瓣数
-        petalCount = min(maxPetals, rollCount / notesPerPetal)
+        // 处于「绽放-归零」过渡期时，只累计、不更新显示，避免重复触发归零
+        if flowerBlooming {
+            return
+        }
+        
+        let total = maxPetals * notesPerPetal // 长满一朵所需音符数（默认 8×5=40）
+        flowerGrowth = min(1.0, Double(flowerNotes) / Double(total))
+        petalCount = min(maxPetals, flowerNotes / notesPerPetal)
+        
+        // 长满一朵 → 触发绽放并归零，开始长下一朵
+        if flowerNotes >= total {
+            completeFlower()
+        }
     }
     
     private func updateFlowerAttributes() {
@@ -298,23 +305,31 @@ class FlowerViewModel: ObservableObject {
         flowerSymmetry = uniformity
     }
     
-    private func triggerFlowerBloom() {
-        // 触发绽放动画
+    /// 一朵花长满后的绽放 + 延迟归零，形成「生长→绽放→归零→重长」的持续循环。
+    /// 旧实现只在 excellent 评级时才归零，而 excellent 几乎不可能触发，导致花长到
+    /// 最大后永久定住。改为每长满一朵即归零重长，与轮指练习自然形成节奏感。
+    private func completeFlower() {
+        flowerBlooming = true
+        
+        // 绽放：花心与花瓣全开、亮度拉满
         withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
             flowerGrowth = 1.0
             flowerBrightness = 1.0
         }
         
-        // 短暂延迟后重置，准备下一朵花
+        // 停留约 1.8 秒让用户看清满花，再归零长下一朵
         Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 秒
-            await MainActor.run {
-                if isRunning {
-                    withAnimation(.easeInOut(duration: 0.5)) {
-                        flowerGrowth = 0.0
-                        petalCount = 0
+            try? await Task.sleep(nanoseconds: 1_800_000_000)
+            await MainActor.run { [weak self] in
+                guard let self = self else { return }
+                if self.isRunning {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        self.flowerGrowth = 0.0
+                        self.petalCount = 0
+                        self.flowerNotes = 0
                     }
                 }
+                self.flowerBlooming = false
             }
         }
     }
@@ -397,6 +412,8 @@ class FlowerViewModel: ObservableObject {
         petalCount = 0
         flowerBrightness = 0.5
         flowerSymmetry = 1.0
+        flowerNotes = 0
+        flowerBlooming = false
         sessionDuration = 0
         isRolling = false
         lastSequenceQuality = nil
