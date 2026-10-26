@@ -10,6 +10,10 @@ import AVFoundation
 import Accelerate
 
 /// 轮指检测器 - 检测连续快速的弹拨动作
+///
+/// 实现方式：用「快起慢落」的包络跟随抽取每次拨弦的起音（峰值拾取），
+/// 每个被确认的波峰计为一次轮指音符。这样连续轮指（音与音之间几乎没有
+/// 静音间隔）也能逐拍数出来，速度（次/秒）和均匀度都会随真实演奏变化。
 class RollDetector {
     
     // MARK: - Configuration
@@ -20,18 +24,29 @@ class RollDetector {
     private let noiseMargin: Float = 4.0
     /// 噪声底指数平滑系数（慢速更新，避免被乐音抬高）
     private let noiseFloorAlpha: Float = 0.004
-    /// 释放迟滞：电平须回落到阈值的该比例以下才允许下一次触发，避免单个衰减音被重复计数
-    private let releaseHysteresis: Float = 0.4
-    private let minRollInterval: Double = 0.05 // 最小间隔 50ms（20 次/秒）
-    private let maxRollInterval: Double = 0.15 // 最大间隔 150ms（6.7 次/秒）
+    /// 包络跟随的衰减时间常数（秒）：决定波峰宽度，20ms 既能贴住单次拨弦，
+    /// 又能在两次拨弦之间充分回落，把重叠的音头拆成各自独立的波峰。
+    private let envTau: Double = 0.02
+    /// 波峰确认条件：包络从其峰值回落到该比例以下，即认为这个音已结束。
+    private let peakFallRatio: Float = 0.5
+    /// 两次有效起音的最小间隔（秒）：低于此值视为同一次拨弦的重复起音，忽略。
+    /// 同时作为轮指速度上限（1/0.035 ≈ 28 次/秒）。
+    private let minRollInterval: Double = 0.035
+    /// 两次起音的最大间隔（秒）：超过即认为一轮轮指结束、开始新序列（≥4 次/秒）。
+    private let maxRollInterval: Double = 0.25
     private let rollSequenceMinCount = 4 // 至少连续 4 次才算轮指
     
     // MARK: - State
-    private var noiseFloor: Float = 0.01 // 环境噪声底估计
-    private var armed: Bool = true // Schmitt 触发：是否允许下一次音符检测
-    private var lastDetectionTime: Date?
+    private var noiseFloor: Float = 0.01      // 环境噪声底估计
+    private var env: Float = 0                 // 包络跟随状态
+    private var peakVal: Float = 0             // 当前正在追踪的波峰高度
+    private var peakTime: Double = 0           // 当前波峰对应的累计时间（秒）
+    private var lastOnsetElapsed: Double = -1  // 上一次起音的累计时间（秒）
+    private var elapsed: Double = 0            // 已处理音频的累计时间（秒）
+    private var anchorDate: Date?              // 时间基准
+    private var anchorElapsed: Double = 0
     private var currentSequence: [RollNote] = [] // 当前轮指序列
-    private var rollSpeed: Double = 0 // 轮指速度（次/秒）
+    private var rollSpeed: Double = 0          // 轮指速度（次/秒）
     /// 最近一次有效阈值（调试用）
     private(set) var lastEffectiveThreshold: Float = 0.02
     
@@ -45,7 +60,7 @@ class RollDetector {
     }
     
     // MARK: - Detection
-    /// 检测轮指动作
+    /// 检测轮指动作（每个音频缓冲调用一次，内部逐采样做峰值拾取）
     func detectRoll(from buffer: AVAudioPCMBuffer) -> RollEvent? {
         guard let channelData = buffer.floatChannelData?[0] else {
             return nil
@@ -54,90 +69,94 @@ class RollDetector {
         let frameLength = Int(buffer.frameLength)
         guard frameLength > 0 else { return nil }
         
-        // 1️⃣ 计算峰值振幅
-        var peak: Float = 0.0
-        vDSP_maxv(channelData, 1, &peak, vDSP_Length(frameLength))
-        
-        // 自适应阈值：噪声底随环境缓慢更新；有效阈值 = max(绝对下限, 噪声底 × 倍数)
+        let envDecay = Float(exp(-1.0 / (sampleRate * envTau)))
         let threshold = max(baseThreshold, noiseFloor * noiseMargin)
         lastEffectiveThreshold = threshold
-        // 仅当信号明显低于阈值时更新噪声底，避免被乐音拉高
-        if peak < threshold * 0.4 {
-            noiseFloor = noiseFloor * (1 - noiseFloorAlpha) + peak * noiseFloorAlpha
-        }
         
-        // 释放迟滞：电平回落到阈值以下后才重新“武装”，避免同一衰减音被重复计数
-        if peak < threshold * releaseHysteresis {
-            armed = true
-        }
+        var lastEvent: RollEvent?
         
-        // 2️⃣ 阈值判定（带 Schmitt 触发）
-        guard peak > threshold, armed else {
-            // 一段时间没有检测到，结束当前序列
-            checkSequenceTimeout()
-            return nil
-        }
-        armed = false
-        
-        // 3️⃣ 检查时间间隔
-        let now = Date()
-        var interval: Double = 0
-        
-        if let lastTime = lastDetectionTime {
-            interval = now.timeIntervalSince(lastTime)
+        for i in 0..<frameLength {
+            let a = abs(channelData[i])
+            // 包络：瞬间跟上峰值，按 envTau 缓慢回落
+            env = max(a, env * envDecay)
+            // 仅当信号明显低于阈值时才缓慢更新噪声底，避免被乐音拉高
+            if a < threshold * 0.4 {
+                noiseFloor = noiseFloor * (1 - noiseFloorAlpha) + a * noiseFloorAlpha
+            }
             
-            // 间隔太短或太长，都不是有效轮指
-            guard interval >= minRollInterval && interval <= maxRollInterval else {
-                if interval > maxRollInterval {
-                    // 间隔太长，结束序列
+            let t = elapsed + Double(i) / sampleRate
+            
+            // 追踪当前波峰
+            if env > peakVal {
+                peakVal = env
+                peakTime = t
+            }
+            // 包络从峰值回落到 peakFallRatio 以下 → 确认一个波峰（一次拨弦）
+            if peakVal > threshold && env < peakVal * peakFallRatio {
+                let candTime = peakTime
+                let candAmp = peakVal
+                peakVal = env // 重置追踪，准备捕捉下一个波峰
+                
+                let interval = lastOnsetElapsed < 0 ? 0 : candTime - lastOnsetElapsed
+                
+                // 若与上一起音间隔过长，先结束旧序列（新音开启一轮新序列）
+                if lastOnsetElapsed >= 0, interval > maxRollInterval, !currentSequence.isEmpty {
                     completeCurrentSequence()
                 }
-                return nil
+                lastOnsetElapsed = candTime
+                
+                // 过快：已有上一音但间隔过短，疑似同一次拨弦的重复起音，忽略
+                // （首个音 interval==0 不在此列，正常计入）
+                if lastOnsetElapsed >= 0, interval < minRollInterval {
+                    continue
+                }
+                
+                let note = RollNote(
+                    timestamp: date(for: candTime),
+                    amplitude: candAmp,
+                    interval: max(0, interval)
+                )
+                currentSequence.append(note)
+                
+                // 计算实时速度（取最近若干间隔的平均）
+                if currentSequence.count >= 2 {
+                    let intervals = currentSequence.suffix(5).dropFirst().map { $0.interval }
+                    let avgInterval = intervals.reduce(0, +) / Double(intervals.count)
+                    rollSpeed = avgInterval > 0 ? 1.0 / avgInterval : 0
+                }
+                
+                let event = RollEvent(
+                    note: note,
+                    sequenceLength: currentSequence.count,
+                    currentSpeed: rollSpeed,
+                    isValidSequence: currentSequence.count >= rollSequenceMinCount
+                )
+                onRollDetected?(event)
+                lastEvent = event
             }
         }
         
-        lastDetectionTime = now
+        elapsed += Double(frameLength) / sampleRate
         
-        // 4️⃣ 创建轮指音符
-        let note = RollNote(
-            timestamp: now,
-            amplitude: peak,
-            interval: interval
-        )
-        
-        // 5️⃣ 添加到当前序列
-        currentSequence.append(note)
-        
-        // 6️⃣ 计算轮指速度
-        if currentSequence.count >= 2 {
-            let intervals = currentSequence.suffix(5).dropFirst().map { $0.interval }
-            let avgInterval = intervals.reduce(0, +) / Double(intervals.count)
-            rollSpeed = avgInterval > 0 ? 1.0 / avgInterval : 0
+        // 缓冲区结束后检查超时：长时间无新起音则结束当前序列
+        if !currentSequence.isEmpty,
+           elapsed - lastOnsetElapsed > maxRollInterval {
+            completeCurrentSequence()
         }
         
-        // 7️⃣ 创建事件
-        let event = RollEvent(
-            note: note,
-            sequenceLength: currentSequence.count,
-            currentSpeed: rollSpeed,
-            isValidSequence: currentSequence.count >= rollSequenceMinCount
-        )
-        
-        onRollDetected?(event)
-        return event
+        return lastEvent
+    }
+    
+    /// 把累计时间（秒）映射为 Date（首个起音时建立基准）
+    private func date(for t: Double) -> Date {
+        if anchorDate == nil {
+            anchorDate = Date()
+            anchorElapsed = t
+        }
+        return anchorDate!.addingTimeInterval(t - anchorElapsed)
     }
     
     // MARK: - Sequence Management
-    
-    /// 检查序列是否超时
-    private func checkSequenceTimeout() {
-        guard let lastTime = lastDetectionTime else { return }
-        
-        let timeSinceLastNote = Date().timeIntervalSince(lastTime)
-        if timeSinceLastNote > maxRollInterval {
-            completeCurrentSequence()
-        }
-    }
     
     /// 完成当前轮指序列
     private func completeCurrentSequence() {
@@ -194,10 +213,16 @@ class RollDetector {
     
     /// 重置检测器
     func reset() {
-        lastDetectionTime = nil
+        noiseFloor = 0.01
+        env = 0
+        peakVal = 0
+        peakTime = 0
+        lastOnsetElapsed = -1
+        elapsed = 0
+        anchorDate = nil
+        anchorElapsed = 0
         currentSequence.removeAll()
         rollSpeed = 0
-        armed = true
     }
 }
 
