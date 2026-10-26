@@ -15,6 +15,7 @@ enum MetronomeSoundType: String, CaseIterable, Identifiable {
     case tick = "滴答"
     case woodblock = "木鱼"
     case drum = "鼓声"
+    case mechanical = "机械"
     
     var id: String { rawValue }
 
@@ -25,7 +26,8 @@ enum MetronomeSoundType: String, CaseIterable, Identifiable {
         switch self {
         case .tick: return "metronome"
         case .woodblock: return "circle.fill"
-        case .drum: return "drums.fill"
+        case .drum: return "circle.hexagongrid.fill" // 系统符号库里没有鼓类符号，用鼓面网格替代
+        case .mechanical: return "waveform"
         }
     }
 }
@@ -36,7 +38,7 @@ class MetronomeManager: ObservableObject {
     
     // MARK: - Published Properties
     
-    @Published var bpm: Int = 120 {
+    @Published var bpm: Int = 108 {
         didSet {
             print("🎵 bpm didSet 触发: \(bpm), isPlaying: \(isPlaying)")
             // ✨ 避免无限循环：只在值改变时才修改
@@ -56,7 +58,7 @@ class MetronomeManager: ObservableObject {
     
     @Published var isPlaying: Bool = false
     @Published var currentBeat: Int = 0
-    @Published var soundType: MetronomeSoundType = .tick {
+    @Published var soundType: MetronomeSoundType = .mechanical {
         didSet {
             print("🎨 soundType didSet 触发: \(soundType.rawValue), isAudioEngineReady: \(isAudioEngineReady)")
             // ✨ 只有在音频引擎就绪时才更新声音
@@ -241,6 +243,10 @@ class MetronomeManager: ObservableObject {
         case .drum:
             tickBuffer = createBeepBuffer(frequency: 400, duration: 0.1)
             tockBuffer = createBeepBuffer(frequency: 300, duration: 0.12)
+        case .mechanical:
+            // 重拍（tick）更亮更高，其余拍（tock）略低，模拟机械节拍器 tick-tock
+            tickBuffer = createMechanicalBuffer(frequency: 2600, duration: 0.05)
+            tockBuffer = createMechanicalBuffer(frequency: 1900, duration: 0.06)
         }
     }
     
@@ -264,16 +270,19 @@ class MetronomeManager: ObservableObject {
             return nil
         }
         
-        let amplitude: Float = 0.8 // ✨ 提高音量（从 0.25 增加到 0.8）
+        // ✨ 音量增益：相对原 0.8 约翻倍。浮点 PCM 上限是 ±1.0，超过会硬削波失真，
+        // 因此用 tanh 软削波把峰值压回 ±1 内，更响但不刺耳。
+        let gain: Float = 2.5
         
         // ✨ 为所有声道生成相同的正弦波
         for channel in 0..<Int(channelCount) {
             let data = channelData[channel]
             
-            // 生成正弦波 + 淡入淡出
+            // 生成正弦波 + 软削波 + 淡入淡出
             for frame in 0..<Int(frameCount) {
                 let time = Float(frame) / Float(sampleRate)
-                let value = amplitude * sin(2.0 * Float.pi * frequency * time)
+                // 2 倍增益后用 tanh 软削波，峰值被压回 ±1 内，避免数字硬削波失真
+                let shaped = tanh(gain * sin(2.0 * Float.pi * frequency * time))
                 
                 // 添加包络，避免爆音
                 let fadeLength = min(Int(sampleRate * 0.005), Int(frameCount) / 4)
@@ -285,7 +294,7 @@ class MetronomeManager: ObservableObject {
                     envelope = Float(Int(frameCount) - frame) / Float(fadeLength)
                 }
                 
-                data[frame] = value * envelope
+                data[frame] = shaped * envelope
             }
         }
         
@@ -293,14 +302,65 @@ class MetronomeManager: ObservableObject {
         return buffer
     }
     
+    /// 机械节拍器「咔哒」声：高频阻尼正弦（机械「丁」声主体）+ 开头极短噪声瞬态（撞击感），
+    /// 经 tanh 软削波压在 ±1 内，明亮、宽带、穿透力强，比纯正弦「滴答」更易听清。
+    private func createMechanicalBuffer(frequency: Float, duration: TimeInterval) -> AVAudioPCMBuffer? {
+        let outputFormat = audioEngine.mainMixerNode.outputFormat(forBus: 0)
+        let sampleRate = outputFormat.sampleRate
+        let channelCount = outputFormat.channelCount
+        let frameCount = AVAudioFrameCount(sampleRate * duration)
+        
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: channelCount),
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
+            print("❌ 创建音频缓冲区失败")
+            return nil
+        }
+        buffer.frameLength = frameCount
+        
+        guard let channelData = buffer.floatChannelData else {
+            print("❌ 获取声道数据失败")
+            return nil
+        }
+        
+        let tau: Float = 0.020          // 衰减时间常数 ~20ms，机械咔哒是短促瞬态但留一点余韵
+        let attackDur: Float = 0.005    // 仅开头 5ms 含噪声瞬态（机械撞击感）
+        let gain: Float = 3.2          // 软削波前增益，确保够响（峰值压在 ±1 内）
+        
+        for channel in 0..<Int(channelCount) {
+            let data = channelData[channel]
+            for frame in 0..<Int(frameCount) {
+                let time = Float(frame) / Float(sampleRate)
+                let env = exp(-time / tau)  // 指数衰减包络
+                let sine = sin(2.0 * Float.pi * frequency * time)        // 高频阻尼正弦
+                let noiseEnv: Float = time < attackDur ? (1.0 - time / attackDur) : 0.0
+                let noise = Float.random(in: -1...1) * noiseEnv * 0.7   // 机械撞击瞬态
+                let raw = (sine * 0.9 + noise) * env
+                let shaped = tanh(raw * gain)  // 软削波，峰值压回 ±1 内
+                
+                // 缓冲首尾淡入淡出，避免边界爆音
+                let fadeLength = min(Int(sampleRate * 0.002), Int(frameCount) / 4)
+                var edge: Float = 1.0
+                if frame < fadeLength {
+                    edge = Float(frame) / Float(fadeLength)
+                } else if frame > Int(frameCount) - fadeLength {
+                    edge = Float(Int(frameCount) - frame) / Float(fadeLength)
+                }
+                data[frame] = shaped * edge
+            }
+        }
+        print("✅ 创建机械咔哒缓冲区：\(channelCount) 声道，\(frameCount) 帧，频率 \(frequency) Hz")
+        return buffer
+    }
+    
     private func loadSettings() {
         print("📖 开始加载设置")
-        if let savedBPM = UserDefaults.standard.object(forKey: "metronome_bpm") as? Int {
+        // ✨ 使用 v2 key：丢弃旧版存过的 120 BPM / 电子滴答，让新默认（108 / 机械）生效
+        if let savedBPM = UserDefaults.standard.object(forKey: "metronome_bpm_v2") as? Int {
             print("📖 加载保存的 BPM: \(savedBPM)")
             bpm = savedBPM
         }
         
-        if let savedSound = UserDefaults.standard.string(forKey: "metronome_sound"),
+        if let savedSound = UserDefaults.standard.string(forKey: "metronome_sound_v2"),
            let soundType = MetronomeSoundType(rawValue: savedSound) {
             print("📖 加载保存的音色: \(savedSound)")
             self.soundType = soundType
@@ -310,8 +370,8 @@ class MetronomeManager: ObservableObject {
     
     func saveSettings() {
         print("💾 保存设置: BPM=\(bpm), 音色=\(soundType.rawValue)")
-        UserDefaults.standard.set(bpm, forKey: "metronome_bpm")
-        UserDefaults.standard.set(soundType.rawValue, forKey: "metronome_sound")
+        UserDefaults.standard.set(bpm, forKey: "metronome_bpm_v2")
+        UserDefaults.standard.set(soundType.rawValue, forKey: "metronome_sound_v2")
         print("💾 设置已保存")
     }
 }

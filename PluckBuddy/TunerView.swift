@@ -43,6 +43,13 @@ struct TunerView: View {
                         Text(viewModel.pipaSoundDetected ? L("已检测到琵琶声") : (viewModel.pipaGateAvailable ? L("聆听中…等待琵琶声") : L("模型未加载，已降级")))
                             .font(.caption)
                             .foregroundStyle(viewModel.pipaSoundDetected ? Color.green : (viewModel.pipaGateAvailable ? Color.secondary : Color.orange))
+
+                        // 判门概率：调音没反馈时用于区分「没听到琵琶声」和「听到了但音高没测到」
+                        if viewModel.pipaGateAvailable {
+                            Text(String(format: L("琵琶概率 %.0f%%"), viewModel.pipaScoreValue * 100))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     } else {
                         // 关掉过滤时给个轻提示，避免用户以为界面挂了
                         Image(systemName: "waveform")
@@ -79,18 +86,17 @@ struct TunerView: View {
             
             Spacer()
             
-            // 四根弦横向排列：从左到右 1弦 → 4弦，音高由高到低
-            HStack(spacing: 20) {
+            // 四根弦横向排列：从左到右 子弦 → 缠弦，音高由高到低
+            // 间距 28 是为了给挂在指示条左侧的刻度数字留出空隙（数字不参与布局宽度）
+            HStack(spacing: 28) {
                 Spacer()
                 
                 ForEach(TunerViewModel.pipaStrings.indices, id: \.self) { index in
                     let string = TunerViewModel.pipaStrings[index]
                     let isActive = viewModel.detectedNote == string.name
-                    // pipaStrings 已按 1 → 4 弦排列，下标加一即为弦号
-                    let stringNumber = index + 1
                     
                     StringTuner(
-                        stringNumber: stringNumber,
+                        stringName: string.traditionalName,
                         note: string.name,
                         frequency: string.frequency,
                         isActive: isActive,
@@ -260,25 +266,41 @@ struct WaveformView: View {
 
 // MARK: - String Tuner (单根弦的调音指示器)
 struct StringTuner: View {
-    let stringNumber: Int
+    let stringName: String
     let note: String
     let frequency: Double
     let isActive: Bool
     let centOffset: Double
     let isTuned: Bool
-    
+
+    /// 音名圆直径（同时决定整列宽度）
+    private let dotSize: CGFloat = 56
+    /// 指示条宽度
+    private let barWidth: CGFloat = 52
+    /// 指示条上 / 中 / 下三段高度
+    private let upperHeight: CGFloat = 105
+    private let centerHeight: CGFloat = 50
+    private let lowerHeight: CGFloat = 105
+    /// 刻度数字列宽与间距。数字用 overlay 挂在指示条左侧，不参与布局宽度，
+    /// 因此指示条能严格与上方音名圆同轴居中。
+    private let scaleWidth: CGFloat = 22
+    private let scaleGap: CGFloat = 5
+
+    private var barHeight: CGFloat { upperHeight + centerHeight + lowerHeight }
+
     var body: some View {
         VStack(spacing: 12) {
-            // 弦序号标签
-            Text(L("\(stringNumber)弦"))
+            // 弦名标签：子弦 / 中弦 / 老弦 / 缠弦
+            Text(L(stringName))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            
+                .lineLimit(1)
+
             // 音名
             Text(note)
                 .font(.title.weight(.bold))
                 .foregroundStyle(isActive ? (isTuned ? .green : .primary) : .secondary)
-                .frame(width: 60, height: 60)
+                .frame(width: dotSize, height: dotSize)
                 .background(
                     Circle()
                         .fill(isActive ? Color.blue.opacity(0.1) : Color.gray.opacity(0.05))
@@ -289,131 +311,134 @@ struct StringTuner: View {
                 )
                 .scaleEffect(isActive ? 1.1 : 1.0)
                 .animation(.spring(response: 0.3), value: isActive)
-            
-            // 竖向音准指示器（拉长并添加刻度）
-            HStack(spacing: 8) {
-                // 左侧刻度标签
-                VStack(spacing: 0) {
-                    Text("+50")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("+25")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("0")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.green)
-                    
-                    Spacer()
-                    
-                    Text("-25")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("-50")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+
+            // 竖向音准指示器（与上方音名圆同轴）
+            indicatorBar
+                .frame(width: barWidth)
+                .overlay(alignment: .leading) {
+                    scaleLabels
+                        .frame(width: scaleWidth, height: barHeight)
+                        .offset(x: -(scaleWidth + scaleGap))
                 }
-                .frame(height: 250)
-                
-                // 中间指示器
-                VStack(spacing: 0) {
-                    // 偏高区域
-                    Rectangle()
-                        .fill(Color.red.opacity(0.1))
-                        .frame(width: 50, height: 125)
-                        .overlay(alignment: .top) {
-                            Text(L("高"))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 4)
-                        }
-                        .overlay {
-                            // 刻度线
-                            VStack(spacing: 0) {
-                                ForEach(0..<5) { i in
-                                    Divider()
-                                        .background(Color.gray.opacity(0.3))
-                                    if i < 4 {
-                                        Spacer()
-                                    }
-                                }
-                            }
-                        }
-                    
-                    // 准确区域
-                    Rectangle()
-                        .fill(Color.green.opacity(0.25))
-                        .frame(width: 50, height: 50)
-                        .overlay {
-                            Text("✓")
-                                .font(.title2)
-                                .foregroundStyle(.green)
-                        }
-                    
-                    // 偏低区域
-                    Rectangle()
-                        .fill(Color.red.opacity(0.1))
-                        .frame(width: 50, height: 125)
-                        .overlay(alignment: .bottom) {
-                            Text(L("低"))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .padding(.bottom, 4)
-                        }
-                        .overlay {
-                            // 刻度线
-                            VStack(spacing: 0) {
-                                ForEach(0..<5) { i in
-                                    Divider()
-                                        .background(Color.gray.opacity(0.3))
-                                    if i < 4 {
-                                        Spacer()
-                                    }
-                                }
-                            }
-                        }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(alignment: .center) {
-                    // 指针箭头
-                    if isActive {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrowtriangle.right.fill")
-                                .foregroundStyle(isTuned ? .green : .red)
-                                .font(.system(size: 16))
-                                .shadow(color: .black.opacity(0.4), radius: 3)
-                        }
-                        .offset(y: calculateArrowOffset(cents: centOffset))
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: centOffset)
-                    }
-                }
-            }
-            
+
             // 频率标签
             Text(String(format: "%.1f Hz", frequency))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
-    
+
+    // MARK: - 指示条
+
+    private var indicatorBar: some View {
+        VStack(spacing: 0) {
+            // 偏高区域
+            Rectangle()
+                .fill(Color.red.opacity(0.1))
+                .frame(width: barWidth, height: upperHeight)
+                .overlay(alignment: .top) {
+                    Text(L("高"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                }
+                .overlay { tickLines }
+
+            // 准确区域
+            Rectangle()
+                .fill(Color.green.opacity(0.25))
+                .frame(width: barWidth, height: centerHeight)
+                .overlay {
+                    Text("✓")
+                        .font(.title2)
+                        .foregroundStyle(.green)
+                }
+
+            // 偏低区域
+            Rectangle()
+                .fill(Color.red.opacity(0.1))
+                .frame(width: barWidth, height: lowerHeight)
+                .overlay(alignment: .bottom) {
+                    Text(L("低"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.bottom, 4)
+                }
+                .overlay { tickLines }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(alignment: .center) {
+            // 指针箭头
+            if isActive {
+                Image(systemName: "arrowtriangle.right.fill")
+                    .foregroundStyle(isTuned ? .green : .red)
+                    .font(.system(size: 16))
+                    .shadow(color: .black.opacity(0.4), radius: 3)
+                    .offset(y: calculateArrowOffset(cents: centOffset))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: centOffset)
+            }
+        }
+    }
+
+    /// 刻度线
+    private var tickLines: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<5) { i in
+                Divider()
+                    .background(Color.gray.opacity(0.3))
+                if i < 4 {
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    /// 左侧刻度数字。按指示条三段的分界线精确定位，不再用等分 Spacer，
+    /// 避免 "+50" 这类文字被压窄后换行（原来会拆成 "+5 0"）。
+    private var scaleLabels: some View {
+        ZStack {
+            Text("+50")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .offset(y: -(barHeight / 2 - 9))
+
+            Text("+25")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .offset(y: -(barHeight / 4))
+
+            Text("0")
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundStyle(.green)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+
+            Text("-25")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .offset(y: barHeight / 4)
+
+            Text("-50")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .offset(y: barHeight / 2 - 9)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .allowsTightening(true)
+    }
+
     /// 计算箭头位置偏移
-    /// cents 范围：-50 到 +50
-    /// 偏移范围：-125 到 +125（像素）
+    /// cents 范围：-50 到 +50，对应 ±半个指示条高度
     private func calculateArrowOffset(cents: Double) -> CGFloat {
         let clampedCents = max(-50, min(50, cents))
         // 负值表示偏低（箭头向下），正值表示偏高（箭头向上）
-        // 125像素（半高） / 50 cents = 2.5 pixels/cent
-        return CGFloat(-clampedCents) * 2.5
+        return CGFloat(-clampedCents) * (barHeight / 2 / 50)
     }
 }
 

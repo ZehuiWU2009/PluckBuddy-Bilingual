@@ -283,7 +283,7 @@ class TechniqueCoachViewModel: ObservableObject {
     
     // MARK: - Skeleton Overlay Generation
 
-    /// 生成双手骨骼覆盖图像（每只手按左右用不同颜色，并在手腕处标注「左 / 右」）
+    /// 生成双手骨骼覆盖图像（每只手按左右用不同颜色，并在手腕处标注「L / R」）
     private func generateSkeletonOverlay(from hands: [HandPoseData], pixelBuffer: CVPixelBuffer) {
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
@@ -313,7 +313,7 @@ class TechniqueCoachViewModel: ObservableObject {
         return image
     }
 
-    /// 画出单只手的骨架、指尖与手腕，并在手腕旁标注「左 / 右」
+    /// 画出单只手的骨架、指尖与手腕，并在手腕旁标注「L / R」
     private func drawOneHandSkeleton(
         pose: HandPoseData,
         context: CGContext,
@@ -397,16 +397,21 @@ class TechniqueCoachViewModel: ObservableObject {
             }
         }
 
-        // 6) 在手腕旁标注「左 / 右」
+        // 6) 在手腕旁标注「L / R」
         if let wristRaw = findPoint("wrist") {
             let ui = convertVisionPointToUIKit(wristRaw, imageSize: imageSize)
-            let label = pose.hand == .right ? "右" : "左"
+            let label = pose.hand == .right ? "R" : "L"
             let attrs: [NSAttributedString.Key: Any] = [
                 .font: UIFont.boldSystemFont(ofSize: 24),
                 .foregroundColor: stroke
             ]
+            // 右手标注放腕点右侧；左手放左侧，避免压在手心/指关节上被遮住
+            let labelSize = (label as NSString).size(withAttributes: attrs)
+            let offsetX: CGFloat = pose.hand == .right
+                ? 14
+                : -14 - labelSize.width
             (label as NSString).draw(
-                at: CGPoint(x: ui.x + 14, y: ui.y - 26),
+                at: CGPoint(x: ui.x + offsetX, y: ui.y - 26),
                 withAttributes: attrs
             )
         }
