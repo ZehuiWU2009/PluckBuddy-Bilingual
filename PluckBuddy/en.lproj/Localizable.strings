@@ -863,3 +863,4 @@
 "已检测到琵琶声，正在分析音高…" = "Pipa detected — analyzing pitch…";
 "琵琶概率 %.0f%%" = "Pipa probability %.0f%%";
 "机械" = "Mechanical";
+"有效演奏数据不足，请实际弹奏后再试" = "Not enough valid performance data. Please play and try again.";

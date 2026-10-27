@@ -315,7 +315,7 @@ final class SessionAudioAnalyzer {
 
     private var onsetTimes: [Double] = []
     private var lastOnsetTime: Double = -1
-    private var rmsEMA: Double = 0
+    private var envSlow: Double = 0   // 起音检测的局部自适应基线（慢包络，tau≈180ms）
     private var wasActive = false
 
     private var rollIOIs: [Double] = []            // 轮指段内的起音间隔
@@ -366,6 +366,21 @@ final class SessionAudioAnalyzer {
         return Self.buildReport(snapshot: snap, piece: piece, duration: duration)
     }
 
+    /// 只要积累了最低限度的真实演奏证据就允许评分。
+    /// 音频是报告的主要依据（必须听到足够多的有效拨弦）；视频手型只是加分项，
+    /// 手部追踪不稳时不应阻断报告——否则真机上手没框住就永远出不了报告。
+    func hasSufficientEvidence(duration: TimeInterval) -> Bool {
+        queue.sync {
+            // 时长不足直接不出
+            guard duration >= 2 else { return false }
+            // 音频证据充分：活跃帧 + 至少两次起音，足以证明“真的在弹”。
+            let audioOK = activeFrames >= 8 && onsetTimes.count >= 2
+            // 丰富度兜底：实际演奏必有音高或视频手型；避免纯噪声被误判为演奏。
+            let richnessOK = tonalFrames >= 1 || postureScores.count >= 6
+            return audioOK && richnessOK
+        }
+    }
+
     // MARK: - 队列内实现
 
     private func _process(_ samples: [Float]) {
@@ -412,7 +427,7 @@ final class SessionAudioAnalyzer {
         tonalFrames = 0
         onsetTimes.removeAll()
         lastOnsetTime = -1
-        rmsEMA = 0
+        envSlow = 0
         wasActive = false
         rollIOIs.removeAll()
         currentTechnique = .unknown
@@ -479,11 +494,14 @@ final class SessionAudioAnalyzer {
         rmsHistory.append(rmsD)
         zcrHistory.append(zcrD)
 
-        let active = rmsD > 0.02
+        let active = rmsD > 0.01
         if active { activeFrames += 1 }
 
-        // 长期 RMS 均值（EMA），用于起音检测
-        rmsEMA = rmsEMA == 0 ? rmsD : rmsEMA * 0.95 + rmsD * 0.05
+        // 局部自适应基线起音检测：用「当前 RMS vs 慢包络(envSlow)」的通量，
+        // 与绝对音量解耦。envSlow 的 tau≈180ms，既能贴住单次拨弦的衰减，
+        // 又会在乐句间隙回落，因此弱奏/稀疏段也能抓到起音，
+        // 且不会被前面一段响度整体抬高而漏检。
+        envSlow = envSlow * 0.70 + rmsD * 0.30
 
         if active {
             if let freq = estimatePitch(window), freq > 60, freq < 1200 {
@@ -495,8 +513,10 @@ final class SessionAudioAnalyzer {
                 }
             }
 
-            // 起音检测：当前能量明显高于背景且距上次起音足够远
-            if rmsD > max(rmsEMA * 1.8, 0.03) && (time - lastOnsetTime) > 0.08 {
+            // 起音检测：当前能量比局部基线高出 50% 以上、超过噪声地板、且距上次起音足够远。
+            // 通量（与音量解耦）使弱奏也能触发；噪声地板挡掉静音底噪。
+            let onsetNoiseFloor: Double = 0.008
+            if rmsD > onsetNoiseFloor && rmsD > envSlow * 1.5 && (time - lastOnsetTime) > 0.06 {
                 if lastOnsetTime > 0, currentTechnique == .roll {
                     let ioi = time - lastOnsetTime
                     if ioi > 0.05, ioi < 1.5 { rollIOIs.append(ioi) }
@@ -585,19 +605,19 @@ final class SessionAudioAnalyzer {
 
         // ===== 视频手型评估（智能指法教练真实使用的信号）=====
         let handShapeAvg = postureHandShapeScores.isEmpty
-            ? (postureScores.isEmpty ? 75 : postureScores.reduce(0, +) / Double(postureScores.count))
+            ? (postureScores.isEmpty ? 0 : postureScores.reduce(0, +) / Double(postureScores.count))
             : postureHandShapeScores.reduce(0, +) / Double(postureHandShapeScores.count)
         let tigerMouthAvg = postureTigerMouthScores.isEmpty
-            ? 75
+            ? 0
             : postureTigerMouthScores.reduce(0, +) / Double(postureTigerMouthScores.count)
         let videoPosture = (handShapeAvg + tigerMouthAvg) / 2   // 视频手型综合（手型 + 虎口）
-        let postureStability: Double = postureScores.isEmpty ? 75 : {
+        let postureStability: Double = postureScores.isEmpty ? 0 : {
             let m = postureScores.reduce(0, +) / Double(postureScores.count)
             let cv = m > 0 ? stddev(postureScores) / m : 1
             return max(0, 100 - cv * 150)
         }()
         let techniqueCorrectness: Double = techniqueObsTotal == 0
-            ? (techniqueObsKnown > 0 ? 90 : 60)
+            ? 0
             : min(100, Double(techniqueObsKnown) / Double(techniqueObsTotal) * 100)
 
         // ===== 音频：音准（用于「指法准确度」的次级信号）=====
@@ -606,32 +626,33 @@ final class SessionAudioAnalyzer {
         let inTuneRate = pitchCents.isEmpty ? 0 :
             Double(pitchCents.filter { abs($0) <= 15 }.count) / Double(pitchCents.count) * 100
         let outOfTuneCount = pitchCents.filter { abs($0) > 25 }.count
-        let intonationScore: Double = meanAbsCents == nil ? 70 :
+        let intonationScore: Double = meanAbsCents == nil ? 0 :
             max(40, 100 - meanAbsCents! * 3)
 
         // ===== 维度一：指法准确度（视频手型主导 + 技法识别 + 音准）=====
         let fingeringScore = clamp(videoPosture * 0.5 + techniqueCorrectness * 0.3 + intonationScore * 0.2)
 
         // ===== 维度二：演奏颗粒度（音频）=====
-        let noteCleanliness = activeFrames == 0 ? 70 :
+        let noteCleanliness = activeFrames == 0 ? 0 :
             Double(tonalFrames) / Double(activeFrames) * 100
         let noiseEnergyPct = 100 - noteCleanliness
         let rollUniformity: Double
-        if rollIOIs.count >= 3 {
-            let mean = rollIOIs.reduce(0, +) / Double(rollIOIs.count)
-            let cv = (stddev(rollIOIs) / mean)
-            rollUniformity = max(0, 100 - cv * 250)
+        if rollIOIs.count >= 4 {
+            rollUniformity = RollUniformityScorer.score(intervals: rollIOIs) * 100
         } else {
-            rollUniformity = 75
+            rollUniformity = 0
         }
-        let articulationScore = clamp(noteCleanliness * 0.7 + rollUniformity * 0.3)
+        // 没有可靠轮指片段时不虚构 75 分，也不因曲目本身没有轮指而扣分。
+        let articulationScore = rollIOIs.count >= 4
+            ? clamp(noteCleanliness * 0.7 + rollUniformity * 0.3)
+            : clamp(noteCleanliness)
 
         // ===== 维度三：节奏准确性（音频）=====
-        var rhythmScore = 70.0
+        var rhythmScore = 0.0
         var avgBeatDevMs = 0.0
         var noteValueAcc = 0.0
         var rushDragCount = 0
-        var consistency = 75.0
+        var consistency = 0.0
         if onsetTimes.count >= 4 {
             let iois = zip(onsetTimes, onsetTimes.dropFirst()).map { $1 - $0 }
             let meanIOI = iois.reduce(0, +) / Double(iois.count)
@@ -648,20 +669,20 @@ final class SessionAudioAnalyzer {
         }
 
         // ===== 维度四：演奏稳定性（音频 + 视频手型稳定度）=====
-        let pitchStability: Double = pitchCents.isEmpty ? 75 :
+        let pitchStability: Double = pitchCents.isEmpty ? 0 :
             max(0, 100 - stddev(pitchCents.map { abs($0) }) * 4)
         let activeRMS = rmsHistory.filter { $0 > 0.02 }
-        let dynStability: Double = activeRMS.isEmpty ? 75 : {
+        let dynStability: Double = activeRMS.isEmpty ? 0 : {
             let m = activeRMS.reduce(0, +) / Double(activeRMS.count)
             let cv = m > 0 ? stddev(activeRMS) / m : 1
             return max(0, 100 - cv * 150)
         }()
-        let timbreStability: Double = zcrHistory.isEmpty ? 75 : {
+        let timbreStability: Double = zcrHistory.isEmpty ? 0 : {
             let m = zcrHistory.reduce(0, +) / Double(zcrHistory.count)
             let cv = m > 0 ? stddev(zcrHistory) / m : 1
             return max(0, 100 - cv * 200)
         }()
-        let rhythmConsistency = onsetTimes.count >= 4 ? consistency : 75
+        let rhythmConsistency = onsetTimes.count >= 4 ? consistency : 0
         let stabilityScore = clamp(
             (pitchStability + dynStability + timbreStability + rhythmConsistency + postureStability) / 5
         )

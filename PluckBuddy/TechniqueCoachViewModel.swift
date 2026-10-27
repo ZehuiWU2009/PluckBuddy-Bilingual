@@ -61,6 +61,9 @@ class TechniqueCoachViewModel: ObservableObject {
     /// 演奏结束后生成的分析评价报告
     @Published var report: CoachReport?
     
+    /// 报告因未听到琵琶声 / 演奏证据不足而无法生成时，弹框提示用户的原因；为 nil 则不弹框
+    @Published var reportBlockedReason: String?
+    
     // MARK: - Internal Properties
     
     /// 视频捕获管理器（供 View 访问预览图层）
@@ -71,6 +74,10 @@ class TechniqueCoachViewModel: ObservableObject {
     private var handPoseAnalyzer = HandPoseAnalyzer()
     private var motionFeatureExtractor = MotionFeatureExtractor()
     private var techniqueClassifier = TechniqueClassifier()
+    /// 基于 Vision 21 关键点的指法分类器（残差分解 + 决策树），用于与旧规则法 A/B
+    private var visionTechniqueClassifier = VisionTechniqueClassifier()
+    /// true：用 Vision 分类器驱动判定；false：退回旧规则法。便于真机 A/B 校准。
+    private let useVisionClassifier = true
     
     private var rollEvaluator = RollPostureEvaluator()
     private var sweepEvaluator = SweepPostureEvaluator()
@@ -86,12 +93,13 @@ class TechniqueCoachViewModel: ObservableObject {
     private var hasSoundResult = false
     
     // MARK: - 技法去抖
-    /// 分类器在中间帧会抖动（同一段演奏在「轮指/扫弦/未识别」之间跳），
+    /// 分类器在中间帧会抖动（同一段演奏在「轮指/弹挑/扫弦/未识别」之间跳），
     /// 直接把每帧结果抛给界面会导致核心要求面板不停切换。
-    /// 这里要求连续若干帧判定一致才认定为有效技法。
-    private var pendingTechnique: TechniqueType = .unknown
-    private var pendingTechniqueFrames = 0
-    private let techniqueStableFrames = 6   // 约 0.2 秒（按 30 fps 计）
+    /// 这里用「近期窗口众数」判定：统计最近若干非 unknown 帧里出现最多的技法，
+    /// 只要它占过半（扫弦瞬时动作门槛更低）即提交，从而抗两类间的抖动——
+    /// 否则一旦轮指先 commit，弹挑就再难凑满连续 6 帧来翻盘，UI 会卡死在轮指。
+    private var recentTechniques: [TechniqueType] = []
+    private let techniqueWindowSize = 9   // 约 0.3 秒（按 30 fps 计），缩小窗口以降低 UI 滞后
     
     private var startTime: Date?
     private var durationTimer: Timer?
@@ -121,6 +129,9 @@ class TechniqueCoachViewModel: ObservableObject {
 
         // 开始新一轮分析前清空上一次的评价报告与分析器累积数据
         audioAnalyzer.reset()
+        motionFeatureExtractor.reset()
+        techniqueClassifier.reset()
+        visionTechniqueClassifier.reset()
         report = nil
         
         // 2. 初始化视频捕获
@@ -161,6 +172,9 @@ class TechniqueCoachViewModel: ObservableObject {
     func stopAnalysis() {
         print("⏹️ 停止视频分析")
         
+        // 清除上一次可能的弹框标志
+        reportBlockedReason = nil
+        
         videoCapture?.stopCapture()
         isAnalyzing = false
         
@@ -175,6 +189,24 @@ class TechniqueCoachViewModel: ObservableObject {
         if let start = startTime {
             sessionDuration = Date().timeIntervalSince(start)
             print("   - 分析时长: \(String(format: "%.1f", sessionDuration))秒")
+        }
+
+        // 没有足够的琵琶声音与手型证据时不生成分数，避免静音也得到 70+。
+        guard audioAnalyzer.hasSufficientEvidence(duration: sessionDuration) else {
+            report = nil
+            reportBlockedReason = L("未检测到琵琶声，无法生成评价报告。请实际弹奏后再试。")
+            statusMessage = L("有效演奏数据不足，请实际弹奏后再试")
+            detectedTechnique = .unknown
+            handPose = nil
+            leftHandDetected = false
+            rightHandDetected = false
+            currentEvaluation = nil
+            recentTechniques.removeAll()
+            motionFeatureExtractor.reset()
+            techniqueClassifier.reset()
+        visionTechniqueClassifier.reset()
+            print("⚠️ 有效演奏数据不足，本次不生成评分报告")
+            return
         }
 
         // 用累积的视频手型 + 音频数据生成分析评价报告
@@ -193,8 +225,10 @@ class TechniqueCoachViewModel: ObservableObject {
         statusMessage = L("分析已停止")
         
         // 重置技法去抖计数，下次开始时重新累积
-        pendingTechnique = .unknown
-        pendingTechniqueFrames = 0
+        recentTechniques.removeAll()
+        motionFeatureExtractor.reset()
+        techniqueClassifier.reset()
+        visionTechniqueClassifier.reset()
     }
     
     // MARK: - Frame Processing
@@ -233,29 +267,53 @@ class TechniqueCoachViewModel: ObservableObject {
         let features = motionFeatureExtractor.extractFeatures(from: rightHand)
 
         // 3. 分类技法
-        let technique = techniqueClassifier.classify(features: features)
+        // 旧规则法（保留做 A/B 对照）
+        let ruleTechnique = techniqueClassifier.classify(features: features)
+        // Vision 21 点分类器（残差分解 + 决策树）
+        let visionResult = visionTechniqueClassifier.push(keypoints: rightHand.keypoints, timestamp: Date().timeIntervalSince1970)
+        let technique: TechniqueType = useVisionClassifier ? visionResult.technique : ruleTechnique
+        // 调试：打印 Vision 分类特征，便于真机校准阈值
+        if visionResult.technique != .unknown {
+            print("🔬 Vision 分类: \(visionResult.technique.rawValue) (conf=\(String(format: "%.2f", visionResult.confidence)), trans=\(String(format: "%.2f", visionResult.features.wristTransSpeed)), rot=\(String(format: "%.2f", visionResult.features.wristRotSpeed)), res=\(String(format: "%.2f", visionResult.features.meanResidual)), ndom=\(visionResult.features.distinctDominant))")
+        }
+        // A/B 对照：两者不一致时记录，帮助判断 Vision 分类器是否优于旧规则法
+        if ruleTechnique != visionResult.technique {
+            print("⚖️ 规则法=\(ruleTechnique.rawValue) vs Vision=\(visionResult.technique.rawValue)")
+        }
 
-        // 3.5 音频侧门控：Core ML 声音分类确认当前确实是琵琶声，才把视觉判定落为技法
-        // 手上动作像弹琴、但听感不是琵琶（例如说话、其它乐器、环境噪声）时不给评分
-        if hasSoundResult, !isPipaSoundDetected {
-            if detectedTechnique != .unknown {
-                print("🔇 声音分类判定为「\(soundSceneLabel)」，暂不给出技法评分")
-                detectedTechnique = .unknown
+        // 3.5 音频侧门控（仅影响评分，不阻断视觉显示）
+        // 视觉通道（Vision 21 点）的技法判定始终提交到 detectedTechnique，
+        // 保证前端“检测到：”实时刷新；只有声音分类确认是琵琶声时，
+        // 才计算并录入姿势评分，避免“不发声也拿高分”。
+        // 之前这里直接 return 会丢弃视觉判定，导致音频分类一旦判非琵琶声，
+        // 前端技法标签就卡死不动（与“后台日志准但 UI 不刷新”的现象一致）。
+        let audioGatePassed = !hasSoundResult || isPipaSoundDetected
+
+        // 3.6 技法去抖：近期窗口众数（仅统计非 unknown 帧）
+        // 用「最近 N 帧出现最多的技法」提交，而非「连续 N 帧相同」，
+        // 这样分类器在弹挑/轮指之间抖动时，UI 跟随真实占优的技法，
+        // 不会因轮指先 commit、弹挑凑不满连续帧而卡死在轮指。
+        if technique != .unknown {
+            recentTechniques.append(technique)
+            if recentTechniques.count > techniqueWindowSize {
+                recentTechniques.removeFirst()
             }
-            currentEvaluation = nil
-            statusMessage = L("未听到琵琶声（") + L(soundSceneLabel) + L("）")
-            return
         }
-
-        // 3.6 技法去抖：连续多帧判定一致才采纳，否则沿用当前已确认的技法
-        if technique == pendingTechnique {
-            pendingTechniqueFrames += 1
+        let counts = recentTechniques.reduce(into: [TechniqueType: Int]()) { $0[$1, default: 0] += 1 }
+        let (mode, modeCount): (TechniqueType, Int)
+        if let m = counts.max(by: { $0.value < $1.value }) {
+            (mode, modeCount) = m
         } else {
-            pendingTechnique = technique
-            pendingTechniqueFrames = 1
+            (mode, modeCount) = (.unknown, 0)
         }
-        let isStable = pendingTechniqueFrames >= techniqueStableFrames
-        let stableTechnique = isStable ? pendingTechnique : detectedTechnique
+        // 扫弦是一次性瞬态动作，门槛更低（约 3/12 即提交）；
+        // 其余持续动作需占窗口过半，避免两类抖动或单帧噪声误判。
+        let requiredStable = (mode == .sweep) ? 3 : (techniqueWindowSize / 2 + 1)
+        let stableTechnique = (modeCount >= requiredStable) ? mode : detectedTechnique
+
+        // 每个有效视频帧都记录（包括 unknown），报告中的“技法识别率”才是真实比例；
+        // 旧逻辑只记录已识别帧，会让该指标几乎恒为 100%。
+        audioAnalyzer.recordTechnique(stableTechnique)
 
         // 技法改变时打印日志
         if stableTechnique != .unknown && stableTechnique != detectedTechnique {
@@ -266,18 +324,22 @@ class TechniqueCoachViewModel: ObservableObject {
             detectedTechnique = .unknown
         }
 
-        // 4. 评估姿势（基于右手）
+        // 4. 评估姿势（基于右手）—— 受音频门控：非琵琶声时不评分、不录入报告
         if stableTechnique != .unknown {
-            currentEvaluation = evaluatePosture(
-                technique: stableTechnique,
-                features: features
-            )
+            if audioGatePassed {
+                currentEvaluation = evaluatePosture(
+                    technique: stableTechnique,
+                    features: features
+                )
 
-            // 把真实视频手型评估喂给报告分析器（后续与音频分析融合生成评价报告）
-            audioAnalyzer.recordTechnique(stableTechnique)
-            audioAnalyzer.recordPosture(evaluation: currentEvaluation!)
+                // 把真实视频手型评估喂给报告分析器（后续与音频分析融合生成评价报告）
+                audioAnalyzer.recordPosture(evaluation: currentEvaluation!)
 
-            updateStatusMessage()
+                updateStatusMessage()
+            } else {
+                currentEvaluation = nil
+                statusMessage = L("未听到琵琶声（") + L(soundSceneLabel) + L("）— 技法仍按视觉显示")
+            }
         }
     }
     
@@ -954,7 +1016,8 @@ class MotionFeatureExtractor {
         var pattern: [Int] = []
         
         // 比较最近几帧，找出哪个手指移动最快
-        for i in 1..<min(3, poseHistory.count) {
+        // 至少观察约 0.2 秒的运动；仅两个相邻帧无法区分弹挑交替和轮指。
+        for i in 1..<min(8, poseHistory.count) {
             let curr = poseHistory[poseHistory.count - i]
             let prev = poseHistory[poseHistory.count - i - 1]
             
@@ -1036,32 +1099,39 @@ class TechniqueClassifier {
             return .sweep
         }
         
-        // 2️⃣ 判断是否为"轮指" (Roll)
-        // 特征：手指依次运动（有明确的顺序模式）
-        if isSequentialPattern(features.sequencePattern) && avgSpeed > 0.2 {
+        let observedFingers = Set(features.sequencePattern)
+        let isThumbIndexAlternation = observedFingers.isSubset(of: Set([0, 1]))
+            && observedFingers.count >= 1
+
+        // 2️⃣ 判断是否为"弹挑" (Pluck)
+        // 弹挑主要由拇指、食指单独或交替运动。必须在轮指之前判断，避免 [0,1]
+        // 这种短序列被误认为轮指。
+        let movingFingers = features.fingerVelocities.enumerated().filter { _, velocity in
+            hypot(Double(velocity.dx), Double(velocity.dy)) > 0.32
+        }
+        if isThumbIndexAlternation && movingFingers.count <= 2 && avgSpeed > 0.10 {
+            print("👆 规则匹配：弹挑 (模式:\(features.sequencePattern), 活跃手指数:\(movingFingers.count))")
+            return .pluck
+        }
+
+        // 3️⃣ 判断是否为"轮指" (Roll)
+        // 至少观察到 3 根不同手指和 3 次连续转换，才视为完整轮指序列。
+        if observedFingers.count >= 3,
+           features.sequencePattern.count >= 4,
+           isSequentialPattern(features.sequencePattern),
+           avgSpeed > 0.2 {
             print("🔄 规则匹配：轮指 (顺序模式:\(features.sequencePattern), 平均速度:\(String(format: "%.2f", avgSpeed)))")
             return .roll
         }
         
-        // 3️⃣ 判断是否为"弹挑" (Pluck)
+        // 4️⃣ 判断是否为一般弹挑：仅 1～2 根手指明显活跃。
         // 特征：单个手指快速运动，其他手指相对静止
-        let movingFingers = features.fingerVelocities.enumerated().filter { index, velocity in
-            hypot(Double(velocity.dx), Double(velocity.dy)) > 0.4
-        }
-        
         if movingFingers.count == 1 || movingFingers.count == 2 {
             print("👆 规则匹配：弹挑 (活跃手指数:\(movingFingers.count))")
             return .pluck
         }
         
-        // 4️⃣ 如果有中等速度的运动，但不符合上述模式
-        if avgSpeed > 0.15 {
-            // 默认判断为轮指（最常见）
-            print("🤔 模糊匹配：默认为轮指 (平均速度:\(String(format: "%.2f", avgSpeed)))")
-            return .roll
-        }
-        
-        // 5️⃣ 没有明显运动
+        // 模糊动作不猜测为轮指，等待更多帧证据。
         return .unknown
     }
     
@@ -1071,17 +1141,17 @@ class TechniqueClassifier {
     private func isSequentialPattern(_ pattern: [Int]) -> Bool {
         guard pattern.count >= 2 else { return false }
         
-        // 检查是否为递增序列
-        let isAscending = pattern.enumerated().dropFirst().allSatisfy { index, value in
-            value > pattern[index - 1]
+        // 允许轮指循环回绕（4→0 或 0→4），但大部分相邻动作必须沿同一方向。
+        let deltas = zip(pattern, pattern.dropFirst()).compactMap { previous, current -> Int? in
+            guard previous != current else { return nil }
+            if current == (previous + 1) % 5 { return 1 }
+            if previous == (current + 1) % 5 { return -1 }
+            return 0
         }
-        
-        // 检查是否为递减序列
-        let isDescending = pattern.enumerated().dropFirst().allSatisfy { index, value in
-            value < pattern[index - 1]
-        }
-        
-        return isAscending || isDescending
+        guard deltas.count >= 3 else { return false }
+        let forward = deltas.filter { $0 == 1 }.count
+        let backward = deltas.filter { $0 == -1 }.count
+        return max(forward, backward) >= Int(ceil(Double(deltas.count) * 0.75))
     }
     
     /// 返回历史记录中最常见的技法（平滑处理）
@@ -1097,11 +1167,6 @@ class TechniqueClassifier {
         // 找出出现次数最多的
         let sorted = counts.sorted { $0.value > $1.value }
         let mostCommon = sorted.first?.key
-        
-        // 如果最常见的是 unknown，尝试返回第二常见的
-        if mostCommon == .unknown, sorted.count > 1 {
-            return sorted[1].key
-        }
         
         return mostCommon
     }

@@ -15,7 +15,7 @@ struct TechniqueCoachView: View {
     /// 界面固定展示的技法：识别到新技法时更新，识别丢失时沿用上一次。
     /// 直接绑定 viewModel.detectedTechnique 会在「识别到」与「未识别」之间抖动，
     /// 导致下方要求条与评估面板整块闪进闪出。
-    @State private var displayTechnique: TechniqueType = .roll
+    @State private var displayTechnique: TechniqueType = .unknown
     /// 固定展示的评估结果：同样沿用上一次有效值，避免评分数字闪烁
     @State private var displayEvaluation: PostureEvaluation?
     
@@ -45,12 +45,21 @@ struct TechniqueCoachView: View {
             displayEvaluation = nil
         }
         .onChange(of: viewModel.currentEvaluation?.overallScore) { _, _ in
-            if let evaluation = viewModel.currentEvaluation {
-                displayEvaluation = evaluation
-            }
+            // 音频门控未通过时 currentEvaluation 为 nil，这里同步清空，避免残留上一次的分数
+            displayEvaluation = viewModel.currentEvaluation
         }
         .sheet(item: $viewModel.report) { report in
             CoachReportView(report: report)
+        }
+        .alert("提示", isPresented: Binding(
+            get: { viewModel.reportBlockedReason != nil },
+            set: { if !$0 { viewModel.reportBlockedReason = nil } }
+        )) {
+            Button(L("知道了"), role: .cancel) {
+                viewModel.reportBlockedReason = nil
+            }
+        } message: {
+            Text(viewModel.reportBlockedReason ?? "")
         }
         .toolbar {
             // 右上角：...⭕️ 图标菜单选择曲目（不显示曲目文字）
@@ -459,7 +468,7 @@ struct TechniqueCoachView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .padding(.horizontal)
-        .padding(.bottom, 8)
+        .padding(.bottom, 116)
     }
     
     // MARK: - Actions
