@@ -250,7 +250,24 @@ v1.0 through v1.3 were built as the Chinese edition between late September and e
 - The commit history is grafted onto the Chinese edition, so this repository carries the whole trajectory from the first runnable build in late September to today in one continuous timeline
 - English mode leads the README and the full Chinese edition follows; both cover the same sections, and the English logo and app icon follow the interface language
 
-### v2.1 · Technique classification and scoring refinements (2026-10-27)
+### v2.1 · Technique Coach expansion (2026-10-21)
+
+- The Fingering Coach gains a piece library with cultural notes, so practice can follow real repertoire with background context
+- Each analysis session now produces an evaluation report summarizing the detected technique and the scored dimensions
+
+### v2.2 · Reporting polish, a third language, and hand-side awareness (2026-10-22)
+
+- Coach report visual polish: an emotional header line, brighter artwork and a shorter intro for an at-a-glance read
+- Added Traditional Chinese (繁體中文) as a third interface language; the existing "中文" option is renamed "简体中文"
+- Vision now detects both hands and tags left/right chirality, and technique classification is driven by the right hand — the foundation for the Vision-based classifier
+
+### v2.3 · Tuner feedback and live roll detection (2026-10-26)
+
+- The Tuner shows live pitch feedback for all four Pipa strings with correct string names
+- Roll and tremolo detection fixed so speed and evenness metrics update live instead of freezing on the first reading
+- Roll-uniformity scoring refined with an energy-flux onset detector; flower (轮指花开) and practice UI prompts fixed
+
+### v2.4 · Vision-led classification and scoring refinements (2026-10-27)
 
 - Technique classification now runs entirely on the Vision hand landmarks; the audio gate only decides whether a score is shown, not which technique is recognized. A windowed majority-vote debounce keeps the on-screen label stable instead of flickering between frames
 - All four evaluation dimensions — hand shape, tiger-mouth angle, rhythm and wrist position — are now scored for every technique. Previously each technique reported only a subset, so the fixed score panel always showed one dimension as zero; tiger-mouth angle is computed from hand pose for all techniques and hand shape was added to tremolo
@@ -514,7 +531,24 @@ v1.0 到 v1.3 是 2026 年 9 月底到 10 月初以中文版形态走完的四�
 - commit 历史嫁接自中文版，本仓库因此承载从 9 月底首个可运行版本到今天的一条连续时间线
 - README 改为英文完整版在前、中文完整版在后，两版覆盖相同章节；欢迎页 logo 与桌面图标跟随界面语言切换
 
-### v2.1 · 技法分类与评分打磨(2026-10-27)
+### v2.1 · 指法教练扩展(2026-10-21)
+
+- 指法教练新增曲库并附文化背景注释，练习时可跟随真实曲目并了解其背景
+- 每次分析结束生成评价报告，汇总识别到的技法与各项评分
+
+### v2.2 · 报告打磨、第三语言与左右手感知(2026-10-22)
+
+- 评价报告视觉打磨：情感化标题、更亮插画、更精简的引言，一眼就能读完
+- 新增繁体中文(繁體中文)作为第三界面语言；原「中文」选项改名为「简体中文」
+- Vision 现在能检测双手并标注左右手 chirality，技法判定交由右手驱动，为纯 Vision 分类器打下基础
+
+### v2.3 · 调音实时反馈与轮指实时检测(2026-10-26)
+
+- 调音器为四根琵琶弦提供实时音高反馈并显示正确弦名
+- 修复轮指 / 吟揉检测，速度与均匀度指标实时更新，不再卡在第一帧
+- 轮指均匀度评分改用能量通量起音检测细化；轮指花开与练习 UI 提示修复
+
+### v2.4 · Vision 主导分类与评分打磨(2026-10-27)
 
 - 技法分类完全交由 Vision 手部关键点判定，音频判门只决定展不展示分数，不再影响技法识别结果。新增基于最近若干帧的众数去抖，屏幕上的技法标签不再逐帧跳动
 - 手型、虎口角度、节奏、手腕位置四个评分维度现在对每种技法都打分。此前每种技法只产出其中一部分，固定评分面板总有一项显示为零；虎口角度改为对全部技法由手姿统一计算，轮指也补上了手型维度
