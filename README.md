@@ -250,6 +250,13 @@ v1.0 through v1.3 were built as the Chinese edition between late September and e
 - The commit history is grafted onto the Chinese edition, so this repository carries the whole trajectory from the first runnable build in late September to today in one continuous timeline
 - English mode leads the README and the full Chinese edition follows; both cover the same sections, and the English logo and app icon follow the interface language
 
+### v2.1 · Technique classification and scoring refinements (2026-10-27)
+
+- Technique classification now runs entirely on the Vision hand landmarks; the audio gate only decides whether a score is shown, not which technique is recognized. A windowed majority-vote debounce keeps the on-screen label stable instead of flickering between frames
+- All four evaluation dimensions — hand shape, tiger-mouth angle, rhythm and wrist position — are now scored for every technique. Previously each technique reported only a subset, so the fixed score panel always showed one dimension as zero; tiger-mouth angle is computed from hand pose for all techniques and hand shape was added to tremolo
+- The Fingering Coach now shows an alert when analysis stops without enough Pipa-sound evidence, instead of silently leaving the report blank
+- The start/stop analysis button was moved up from the bottom edge, clear of the home indicator, so it is easier to tap
+
 ## Known Limitations / To Be Improved
 
 - Classifier precision is still limited by the training data distribution. If the real-device console shows `rms > 0.05` but `pipa < 0.3`, the model's discriminative power is insufficient for the current microphone sound quality, and it needs to be retrained with the Create ML Sound Analysis template (≥ 30 clips of 16 kHz audio per class; a clearly better model can usually be produced within 30 minutes)
@@ -506,6 +513,13 @@ v1.0 到 v1.3 是 2026 年 9 月底到 10 月初以中文版形态走完的四�
 - 双语版成为唯一维护线，作为 PluckBuddy 2.0 继续演进。中文版与国际版到此停止维护并归档，各自 README 指向本仓库
 - commit 历史嫁接自中文版，本仓库因此承载从 9 月底首个可运行版本到今天的一条连续时间线
 - README 改为英文完整版在前、中文完整版在后，两版覆盖相同章节；欢迎页 logo 与桌面图标跟随界面语言切换
+
+### v2.1 · 技法分类与评分打磨(2026-10-27)
+
+- 技法分类完全交由 Vision 手部关键点判定，音频判门只决定展不展示分数，不再影响技法识别结果。新增基于最近若干帧的众数去抖，屏幕上的技法标签不再逐帧跳动
+- 手型、虎口角度、节奏、手腕位置四个评分维度现在对每种技法都打分。此前每种技法只产出其中一部分，固定评分面板总有一项显示为零；虎口角度改为对全部技法由手姿统一计算，轮指也补上了手型维度
+- 指法教练在停止分析但琵琶声证据不足时弹出提示，而不是默默留空报告
+- 开始/停止分析按钮从屏幕底边上移，避开 Home 指示条，更好点按
 
 ## 已知限制 / 待改进
 
