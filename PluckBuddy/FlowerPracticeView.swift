@@ -78,7 +78,12 @@ struct FlowerPracticeView: View {
                             brightness: viewModel.flowerBrightness,
                             symmetry: viewModel.flowerSymmetry,
                             isRolling: viewModel.isRolling,
-                            pulseCounter: viewModel.pulseCounter // ✨ 传递脉冲计数器
+                            pulseCounter: viewModel.pulseCounter, // ✨ 传递脉冲计数器
+                            isStageResting: viewModel.isStageResting,
+                            bloomFlash: viewModel.bloomFlashCounter,
+                            layers: viewModel.flowerLayers,
+                            isSpeedTargetMet: viewModel.isSpeedTargetMet,
+                            petalCloseCount: viewModel.petalCloseCount
                         )
                         .frame(width: 220, height: 220)  // ✨ 缩小from 250
                         
@@ -250,33 +255,48 @@ struct FlowerView: View {
     let symmetry: Double // 0-1
     let isRolling: Bool // 是否正在轮指
     let pulseCounter: Int // ✨ 新增：脉冲计数器参数
-    
+    let isStageResting: Bool // 是否处于「长一圈→停顿」的台阶停顿
+    let bloomFlash: Int // 优秀序列触发的金色光晕计数
+    let layers: Int // 花层数（连续优秀累积的重瓣，1~3）
+    let isSpeedTargetMet: Bool // 速度是否达到目标 BPM（达标花色转金）
+    let petalCloseCount: Int // 满花后已收拢的花瓣数（依次收拢用）
+
     @State private var rotationAngle: Double = 0
-    
+    @State private var breathScale: Double = 1.0 // 停顿期间的呼吸缩放
+    @State private var restRingScale: Double = 0.85 // 停顿光环的呼吸
+    @State private var restRingOpacity: Double = 0.0
+    @State private var flashScale: Double = 0.6 // 光晕扩散半径
+    @State private var flashOpacity: Double = 0.0 // 光晕不透明度
+
     var body: some View {
         ZStack {
             // 背景圆圈
             Circle()
                 .fill(Color.green.opacity(0.1))
-            
-            // 花瓣
-            ForEach(0..<8) { index in
+
+            // 花瓣：支持多层重瓣，满花后按 petalCloseCount 从最后一片起依次收拢
+            ForEach(0..<8, id: \.self) { index in
                 if index < petalCount {
+                    let isClosed = index >= petalCount - petalCloseCount
                     // 花瓣整体尺寸与花心同步由 growth 驱动（保证同步长大、比例协调）。
                     // 均匀度 symmetry 只做 0.8~1.0 的轻微饱满度微调，不再压缩整体大小，
                     // 否则 growth 虽在增大、花瓣却被 symmetry(<1) 压小，花心大花瓣小的比例失调。
                     let petalScale = growth * (0.8 + 0.2 * symmetry)
-                    Petal(
-                        rotation: Double(index) * 45 + rotationAngle,
-                        scale: petalScale,
-                        color: petalColor,
-                        pulseCounter: pulseCounter // ✨ 传递脉冲计数器
-                    )
-                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: growth)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: petalCount)
+                    ForEach(0..<layers, id: \.self) { layer in
+                        Petal(
+                            rotation: Double(index) * 45 + layerAngleOffset(layer),
+                            scale: petalScale * layerScale(layer) * (isClosed ? 0.15 : 1.0),
+                            color: petalColor,
+                            pulseCounter: pulseCounter, // ✨ 传递脉冲计数器
+                            opacity: isClosed ? 0.0 : 1.0
+                        )
+                        .animation(.spring(response: 0.45, dampingFraction: 0.6), value: growth)
+                        .animation(.spring(response: 0.45, dampingFraction: 0.6), value: petalCount)
+                        .animation(.easeInOut(duration: 0.24), value: petalCloseCount)
+                    }
                 }
             }
-            
+
             // 花心
             Circle()
                 .fill(
@@ -291,9 +311,37 @@ struct FlowerView: View {
                 .opacity(growth > 0 ? 1 : 0)
                 .scaleEffect(growth)
                 .scaleEffect(isRolling ? 1.1 : 1.0) // 轮指时轻微放大
+                // 速度达标：花心泛金光，作为「跟上了目标速度」的即时奖励
+                .shadow(color: isSpeedTargetMet ? Color.yellow.opacity(0.9) : .clear,
+                        radius: isSpeedTargetMet ? 16 : 0)
                 .animation(.spring(response: 0.5), value: growth)
                 .animation(.spring(response: 0.2, dampingFraction: 0.5), value: isRolling)
+                .animation(.easeInOut(duration: 0.3), value: isSpeedTargetMet)
+
+            // 台阶停顿的「蓄力光环」：停顿期间从花心缓慢外扩呼吸，
+            // 让停顿本身有动作可看，而不是一片死寂的静止
+            Circle()
+                .stroke(Color.orange.opacity(0.6), lineWidth: 2.5)
+                .frame(width: 150, height: 150)
+                .scaleEffect(restRingScale)
+                .opacity(restRingOpacity)
+                .allowsHitTesting(false)
+
+            // 优秀序列的金色光晕：从花心向外扩散一圈再淡出
+            Circle()
+                .stroke(
+                    AngularGradient(
+                        colors: [Color.yellow, Color.orange, Color.yellow],
+                        center: .center
+                    ),
+                    lineWidth: 4
+                )
+                .frame(width: 120, height: 120)
+                .scaleEffect(flashScale)
+                .opacity(flashOpacity)
+                .allowsHitTesting(false)
         }
+        .scaleEffect(breathScale)
         .rotationEffect(.degrees(rotationAngle))
         .onChange(of: pulseCounter) { oldValue, newValue in
             // ✨ 监听脉冲计数器变化，触发旋转动画
@@ -303,14 +351,63 @@ struct FlowerView: View {
                 }
             }
         }
+        .onChange(of: isStageResting) { _, resting in
+            // 台阶停顿期间花朵明显「呼吸」（幅度 12%），并伴一圈外扩光环，
+            // 让停顿看得见：花在蓄力，而不是卡住了。
+            if resting {
+                withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                    breathScale = 1.12
+                    restRingScale = 1.3
+                    restRingOpacity = 0.55
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    breathScale = 1.0
+                    restRingScale = 0.85
+                    restRingOpacity = 0.0
+                }
+            }
+        }
+        .onChange(of: bloomFlash) { oldValue, newValue in
+            guard newValue > oldValue else { return }
+            flashScale = 0.7
+            flashOpacity = 0.9
+            withAnimation(.easeOut(duration: 0.7)) {
+                flashScale = 1.8
+                flashOpacity = 0.0
+            }
+        }
     }
-    
+
+    /// 重瓣每层的旋转错开角度，避免层与层完全重叠
+    private func layerAngleOffset(_ layer: Int) -> Double {
+        switch layer {
+        case 0: return 0
+        case 1: return 22.5
+        default: return 11.25
+        }
+    }
+
+    /// 重瓣每层的尺寸递减，外层大、内层小，形成层叠感
+    private func layerScale(_ layer: Int) -> Double {
+        switch layer {
+        case 0: return 1.0
+        case 1: return 0.72
+        default: return 0.5
+        }
+    }
+
     private var petalColor: Color {
-        // 根据亮度调整颜色
-        let hue = 0.9 // 粉红色调
-        let saturation = 0.6 + (brightness * 0.4)
-        let lightness = 0.5 + (brightness * 0.2)
-        
+        // 速度达到目标 BPM → 花色整体转金，是「达标了」最直观的奖励
+        if isSpeedTargetMet {
+            return Color(hue: 0.13, saturation: 0.9, brightness: 0.95)
+        }
+        // 色相随均匀度微微偏移，饱和度随「均匀度 × 亮度」：
+        // 弹得又稳又快 → 花色饱满鲜亮；弹得不稳 → 花色发灰发淡，一眼能看出手感好坏。
+        let hue = 0.88 + 0.06 * symmetry
+        let saturation = (0.45 + 0.45 * symmetry) * (0.7 + 0.3 * brightness)
+        let lightness = 0.45 + 0.25 * brightness
+
         return Color(hue: hue, saturation: saturation, brightness: lightness)
     }
 }
@@ -321,6 +418,7 @@ struct Petal: View {
     let scale: Double
     let color: Color
     let pulseCounter: Int // ✨ 改用计数器而非布尔值
+    let opacity: Double // 收拢时淡出（满花后花瓣依次收拢用）
     
     @State private var pulseScale: Double = 1.0
     
@@ -338,6 +436,7 @@ struct Petal: View {
             .scaleEffect(pulseScale)
             .rotationEffect(.degrees(rotation))
             .scaleEffect(scale)
+            .opacity(opacity)
             .onChange(of: pulseCounter) { oldValue, newValue in
                 // ✨ 修复：每次计数器变化时触发新的脉冲
                 guard newValue > oldValue else { return }

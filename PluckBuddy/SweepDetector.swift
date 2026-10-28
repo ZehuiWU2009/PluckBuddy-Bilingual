@@ -19,15 +19,42 @@ class SweepDetector {
     
     // MARK: - State
     private var lastDetectionTime: Date?
-    private var lastAmplitude: Float = 0
     private var sweepHistory: [SweepEvent] = []
-    
+    private var lastDirection: SweepDirection? // 上一次判定的方向（走向不明显时按它交替推断）
+
+    // MARK: - 音高走向分析（用于判方向）
+    private let fftSize = 1024 // 约 21ms @48k，足够分辨相邻弦发声的先后顺序
+    private let fftSetup: vDSP_DFT_Setup
+    private var realBuffer: [Float]
+    private var imagBuffer: [Float]
+    private var magnitudes: [Float]
+    /// 判定方向所需的相对走向阈值：质心前后半相对变化超过这个值才采信。
+    /// 四根弦的延音互相重叠，走向信号的量级本来就小（合成测试约 0.01~0.07），
+    /// 阈值定高了就会频繁失效、退回兜底，所以这里取得较敏感。
+    /// 若真机日志显示方向乱跳，把这个值调大（0.05~0.08）。
+    private let trendThreshold: Float = 0.02
+
     // MARK: - Callbacks
     var onSweepDetected: ((SweepEvent) -> Void)?
-    
+
     // MARK: - Initialization
     init(sampleRate: Double = 48000.0) {
         self.sampleRate = sampleRate
+        guard let setup = vDSP_DFT_zrop_CreateSetup(
+            nil,
+            vDSP_Length(fftSize),
+            vDSP_DFT_Direction.FORWARD
+        ) else {
+            fatalError("Failed to create FFT setup")
+        }
+        self.fftSetup = setup
+        self.realBuffer = [Float](repeating: 0, count: fftSize)
+        self.imagBuffer = [Float](repeating: 0, count: fftSize)
+        self.magnitudes = [Float](repeating: 0, count: fftSize / 2)
+    }
+
+    deinit {
+        vDSP_DFT_DestroySetup(fftSetup)
     }
     
     // MARK: - Detection
@@ -50,7 +77,6 @@ class SweepDetector {
         
         // 3️⃣ 检查是否超过阈值
         guard peak > sweepThreshold else {
-            lastAmplitude = peak
             return nil
         }
         
@@ -65,23 +91,29 @@ class SweepDetector {
         
         lastDetectionTime = now
         
-        // 5️⃣ 检测方向（基于振幅变化趋势）
+        // 5️⃣ 检测方向：扫弦是四根弦依次发声的琶音，方向体现在「音高的走向」上：
+        //     向下扫（扫）由缠弦划向子弦，音高由低到高 → 频谱质心上升；
+        //     向上扫（拂）由子弦划向缠弦，音高由高到低 → 频谱质心下降。
+        //     旧实现拿「本次峰值 vs 上次峰值」比较，与方向毫无物理关系，是判不准的根因。
+        let trend = centroidTrend(in: channelData, count: frameLength)
         let direction: SweepDirection
-        if peak > lastAmplitude * 1.2 {
-            // 振幅明显增大，可能是向下扫
-            direction = .down
-        } else if peak < lastAmplitude * 0.8 {
-            // 振幅明显减小，可能是向上扫
-            direction = .up
+        if let trend = trend, abs(trend) > trendThreshold {
+            direction = trend > 0 ? .down : .up
         } else {
-            // 振幅变化不大，根据历史推断
+            // 走向不明显时按「扫拂交替」推断。扫弦练习基本都是一扫一拂，
+            // 这是很强的先验；旧实现被无意义的峰值比较分支抢占，才几乎全判成向下。
             direction = inferDirection()
         }
-        
-        lastAmplitude = peak
-        
-        // 6️⃣ 计算力度等级（基于峰值）
-        let strength = calculateStrength(peak: peak, rms: rms)
+        lastDirection = direction
+
+        if let trend = trend {
+            print("   🧭 音高走向: \(String(format: "%+.3f", trend)) → \(direction == .down ? "向下扫（音高由低到高）" : "向上拂（音高由高到低）")")
+        } else {
+            print("   🧭 音高走向: 信号太弱无法判定，沿用上次方向")
+        }
+
+        // 6️⃣ 计算力度等级（基于归一化后的峰值力度）
+        let strength = calculateStrength(peak: peak)
         
         // 7️⃣ 创建扫弦事件
         let event = SweepEvent(
@@ -103,42 +135,87 @@ class SweepDetector {
     }
     
     // MARK: - Analysis
-    
-    /// 根据历史推断方向
-    private func inferDirection() -> SweepDirection {
-        guard sweepHistory.count >= 2 else {
-            return .down // 默认向下
+
+    /// 计算一段样本的频谱质心（Hz）。质心越高说明高频能量占比越大、音高越高。
+    private func spectralCentroid(of data: UnsafePointer<Float>) -> Float {
+        var window = [Float](repeating: 0, count: fftSize)
+        vDSP_hamm_window(&window, vDSP_Length(fftSize), 0)
+
+        var windowed = [Float](repeating: 0, count: fftSize)
+        vDSP_vmul(data, 1, window, 1, &windowed, 1, vDSP_Length(fftSize))
+
+        // 输入与输出必须用不同的数组：同一个数组既作 in 又作 out 会触发 Swift 的
+        // 独占访问检查（Debug 下运行时崩溃、Release 下直接编译不过）。
+        var inputReal = windowed
+        var inputImag = [Float](repeating: 0, count: fftSize)
+        vDSP_DFT_Execute(fftSetup, &inputReal, &inputImag, &realBuffer, &imagBuffer)
+
+        let half = fftSize / 2
+        let resolution = Float(sampleRate) / Float(fftSize)
+        var weighted: Float = 0
+        var total: Float = 0
+        for i in 0..<half {
+            let real = realBuffer[i]
+            let imag = imagBuffer[i]
+            let mag = sqrt(real * real + imag * imag)
+            magnitudes[i] = mag
+            weighted += Float(i) * resolution * mag
+            total += mag
         }
-        
-        // 取最近若干次记录用于方向判定
-        let recentDirections = sweepHistory.suffix(5)
-        
-        // 倾向于交替方向
-        let lastDirection = recentDirections.last?.direction ?? .down
-        return lastDirection == .down ? .up : .down
+        return total > 0 ? weighted / total : 0
     }
-    
-    /// 计算力度等级
-    private func calculateStrength(peak: Float, rms: Float) -> StrengthLevel {
-        // 综合考虑峰值和 RMS
-        let combinedStrength = (peak * 0.7 + rms * 0.3)
-        
-        if combinedStrength > 0.7 {
+
+    /// 扫弦窗内的音高走向（相对值）：
+    /// >0 表示质心上升（音高由低到高，缠弦→子弦，即向下扫 / 扫）；
+    /// <0 表示质心下降（音高由高到低，子弦→缠弦，即向上扫 / 拂）。
+    /// 把窗切成若干子块逐块算质心，再比较前后半的均值差。
+    private func centroidTrend(in data: UnsafePointer<Float>, count: Int) -> Float? {
+        let blockCount = count / fftSize
+        let half = blockCount / 2
+        guard half >= 1 else { return nil }
+
+        var centroids: [Float] = []
+        centroids.reserveCapacity(blockCount)
+        for b in 0..<blockCount {
+            centroids.append(spectralCentroid(of: data + b * fftSize))
+        }
+
+        let first = centroids.prefix(half).reduce(0, +) / Float(half)
+        let second = centroids.suffix(half).reduce(0, +) / Float(half)
+        let mean = centroids.reduce(0, +) / Float(blockCount)
+        guard mean > 80 else { return nil } // 能量太低，走向不可信
+        return (second - first) / mean
+    }
+
+    /// 走向不明显时的兜底：按「一扫一拂」交替推断。
+    /// 旧实现要求历史至少 2 条才交替，开头的几次一律判成向下，方向序列从一开始就歪了。
+    private func inferDirection() -> SweepDirection {
+        guard let last = lastDirection else {
+            return .down // 第一次默认向下
+        }
+        return last == .down ? .up : .down
+    }
+
+    /// 计算力度等级（基于归一化后的力度，阈值与用户看到的百分比一致）
+    private func calculateStrength(peak: Float) -> StrengthLevel {
+        let n = normalizedSweepStrength(amplitude: peak)
+
+        if n >= 0.80 {
             return .veryStrong
-        } else if combinedStrength > 0.5 {
+        } else if n >= 0.55 {
             return .strong
-        } else if combinedStrength > 0.3 {
+        } else if n >= 0.25 {
             return .medium
         } else {
             return .weak
         }
     }
-    
+
     /// 获取平均力度
     func getAverageStrength() -> Double {
         guard !sweepHistory.isEmpty else { return 0 }
-        
-        let totalStrength = sweepHistory.reduce(0.0) { $0 + Double($1.amplitude) }
+
+        let totalStrength = sweepHistory.reduce(0.0) { $0 + $1.normalizedStrength }
         return totalStrength / Double(sweepHistory.count)
     }
     
@@ -159,9 +236,24 @@ class SweepDetector {
     /// 重置检测器
     func reset() {
         lastDetectionTime = nil
-        lastAmplitude = 0
+        lastDirection = nil
         sweepHistory.removeAll()
     }
+}
+
+// MARK: - 力度归一化
+/// 麦克风前正常扫弦的峰值大多落在 0.15~0.6。过去直接拿振幅当百分比，
+/// 读数常年停在 30% 上下、与手感严重不符。这里把这段常见区间线性映射到 0~100%，
+/// 想要更「容易拿高分」就调低 strengthCeilAmplitude，反之调高。
+private let strengthFloorAmplitude: Double = 0.10
+private let strengthCeilAmplitude: Double = 0.60
+
+/// 把峰值振幅映射成 0~1 的力度
+func normalizedSweepStrength(amplitude: Float) -> Double {
+    let span = strengthCeilAmplitude - strengthFloorAmplitude
+    guard span > 0 else { return 0 }
+    let n = (Double(amplitude) - strengthFloorAmplitude) / span
+    return min(1.0, max(0.0, n))
 }
 
 // MARK: - SweepDirection
@@ -223,7 +315,7 @@ struct SweepEvent {
     
     /// 归一化的力度值 (0-1)
     var normalizedStrength: Double {
-        return Double(amplitude)
+        return normalizedSweepStrength(amplitude: amplitude)
     }
 }
 
@@ -235,9 +327,12 @@ struct SweepStatistics {
     let downCount: Int
     let averageStrength: Double
     
-    /// 方向平衡度（越接近 0.5 越平衡）
+    /// 方向平衡度（0-1，越接近 1 越平衡）
+    /// 旧公式是 min(up,down)/total，上下完全交替时也只有 0.5，
+    /// 于是「平衡得再好也只显示 50%」。改为 2×min/total，完全交替 = 100%。
     var directionBalance: Double {
         guard totalCount > 0 else { return 0.5 }
-        return Double(min(upCount, downCount)) / Double(totalCount)
+        let raw = 2.0 * Double(min(upCount, downCount)) / Double(totalCount)
+        return min(1.0, raw)
     }
 }

@@ -9,6 +9,32 @@ import Foundation
 import AVFoundation
 import Accelerate
 
+/// 轮指间隔的稳健均匀度评分。保持无状态，供“轮指花开”和教练报告共用，
+/// 避免两个页面对同一段演奏给出不同结论。
+enum RollUniformityScorer {
+    static func score(intervals: [Double]) -> Double {
+        guard intervals.count >= 3 else { return 0 }
+
+        let sorted = intervals.sorted()
+        let median = sorted[sorted.count / 2]
+        guard median > 0 else { return 0 }
+
+        let deviations = intervals.map { abs($0 - median) }.sorted()
+        let mad = deviations[deviations.count / 2]
+        let tolerance = max(median * 0.20, mad * 3.5)
+        let filtered = intervals.filter { abs($0 - median) <= tolerance }
+        let core = filtered.count >= 3 ? filtered : intervals
+        let mean = core.reduce(0, +) / Double(core.count)
+        guard mean > 0 else { return 0 }
+
+        let variance = core.map { pow($0 - mean, 2) }.reduce(0, +) / Double(core.count)
+        let cv = sqrt(variance) / mean
+
+        // CV=0.2 约 82%，CV=0.3 约 64%。
+        return max(0, min(1, exp(-5.0 * cv * cv)))
+    }
+}
+
 /// 轮指检测器 - 检测连续快速的弹拨动作
 ///
 /// 实现方式：用「快起慢落」的包络跟随抽取每次拨弦的起音（峰值拾取），
@@ -221,35 +247,7 @@ class RollDetector {
         let intervals = currentSequence.dropFirst().map { $0.interval }
         guard !intervals.isEmpty else { return 0 }
         
-        // 稳健变异系数：剔除两端各 15% 的极端间隔后再算 cv。
-        // 个别起音误判（偶尔多/漏一拍）会产生离群间隔，原始 cv 会被这些离群值
-        // 严重拉高，使均匀度近乎清零；剔除极端值后能更真实反映整体手法。
-        let core = trimmedCore(intervals, trimFraction: 0.15)
-        let mean = core.reduce(0, +) / Double(core.count)
-        
-        guard mean > 0 else { return 0 }
-        
-        let variance = core.map { pow($0 - mean, 2) }.reduce(0, +) / Double(core.count)
-        let stdDev = sqrt(variance)
-        
-        // 变异系数（越小越均匀）
-        let cv = stdDev / mean
-        
-        // 转换为 0-1 分数。系数从 3.0 放宽到 2.0：
-        // 真实轮指间隔波动约 10%-25%（cv 0.1-0.25），对应分数 0.5-0.8，
-        // 让认真练习就能稳定拿到 good～excellent，而不是几乎永远卡在低分。
-        return max(0, min(1, 1.0 - cv * 2.0))
-    }
-    
-    /// 返回剔除两端各 trimFraction 比例的极端值后的核心样本（样本数过少则原样返回）
-    private func trimmedCore(_ values: [Double], trimFraction: Double) -> [Double] {
-        guard values.count >= 6 else { return values }
-        let sorted = values.sorted()
-        let k = max(1, Int((Double(sorted.count) * trimFraction).rounded(.down)))
-        let lo = min(k, sorted.count - 1)
-        let hi = max(0, sorted.count - k)
-        guard hi > lo else { return values }
-        return Array(sorted[lo..<hi])
+        return RollUniformityScorer.score(intervals: intervals)
     }
     
     /// 重置检测器

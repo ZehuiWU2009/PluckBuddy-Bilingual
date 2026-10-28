@@ -32,15 +32,15 @@ struct WaveSettingsSheet: View {
                                 .foregroundStyle(.cyan)
                         }
                         
-                        Slider(value: $targetBPM, in: 36...220, step: 1)
+                        Slider(value: $targetBPM, in: Double(MetronomeManager.minimumBPM)...Double(MetronomeManager.maximumBPM), step: 1)
                             .tint(.cyan)
                         
                         HStack {
-                            Text("36")
+                            Text("\(MetronomeManager.minimumBPM)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            Text("220")
+                            Text("\(MetronomeManager.maximumBPM)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

@@ -714,7 +714,7 @@ struct PracticeSettingsSheet: View {
                         // 调整按钮
                         HStack(spacing: 12) {
                             Button(action: {
-                                localBPM = max(36, localBPM - 10)
+                                localBPM = max(Double(MetronomeManager.minimumBPM), localBPM - 10)
                             }) {
                                 Image(systemName: "minus.circle.fill")
                                     .font(.largeTitle)
@@ -725,7 +725,7 @@ struct PracticeSettingsSheet: View {
                             Spacer()
                             
                             Button(action: {
-                                localBPM = min(220, localBPM + 10)
+                                localBPM = min(Double(MetronomeManager.maximumBPM), localBPM + 10)
                             }) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.largeTitle)
@@ -735,11 +735,11 @@ struct PracticeSettingsSheet: View {
                         }
                         
                         // 滑块
-                        Slider(value: $localBPM, in: 36...220, step: 1)
+                        Slider(value: $localBPM, in: Double(MetronomeManager.minimumBPM)...Double(MetronomeManager.maximumBPM), step: 1)
                             .tint(.blue)
                         
                         // 提示文字
-                        Text(L("范围: 36-220 BPM"))
+                        Text("\(L("范围")): \(MetronomeManager.minimumBPM)-\(MetronomeManager.maximumBPM) BPM")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

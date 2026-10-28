@@ -18,7 +18,8 @@ class RunningViewModel: ObservableObject {
     @Published var distance: Double = 0.0 // 跑步距离（米）
     @Published var pluckCount: Int = 0 // 弹拨次数
     @Published var currentBPM: Double = 0 // 当前速度
-    @Published var stability: Double = 0 // 稳定性 0-1
+    @Published var stability: Double = 0 // 稳定性 0-1（最近窗口的瞬时值）
+    @Published var averageStability: Double = 0 // 本次练习稳定性的平均值（停止后展示）
     @Published var score: Int = 0 // 得分
     @Published var statusMessage = L("准备开始")
     @Published var targetBPM: Double = 120 // 目标速度
@@ -55,6 +56,8 @@ class RunningViewModel: ObservableObject {
     private var durationTimer: Timer? // 用于更新实时时长
     private var idleWorkItem: DispatchWorkItem? // 用于检测空闲（无弹奏）
     private var cancellables = Set<AnyCancellable>() // ✨ Combine 订阅
+    private var stabilitySum: Double = 0 // 本次练习稳定性采样值之和
+    private var stabilitySampleCount: Int = 0 // 有效采样个数（用于算平均）
     
     // MARK: - Constants
     private let distancePerPluck: Double = 1.0 // 每次弹拨前进 1 米
@@ -180,7 +183,7 @@ class RunningViewModel: ObservableObject {
                     duration: sessionDuration,
                     pluckCount: pluckCount,
                     averageBPM: currentBPM,
-                    stability: stability,
+                    stability: averageStability, // 存整场平均，而非停止瞬间的最后一次瞬时值
                     distance: distance,
                     score: score
                 )
@@ -219,8 +222,17 @@ class RunningViewModel: ObservableObject {
         print("   ✓ 更新 currentBPM: \(String(format: "%.1f", oldBPM)) → \(String(format: "%.1f", currentBPM))")
         
         stability = rhythmDetector?.calculateStability() ?? 0
-        
+
+        // 累计本次练习的稳定性平均值：只有检测器真正算出值（>0）的采样才计入，
+        // 否则开头几个音的 0 会把整场平均值拉低，读起来像「练得很差」。
+        if stability > 0 {
+            stabilitySum += stability
+            stabilitySampleCount += 1
+            averageStability = stabilitySum / Double(stabilitySampleCount)
+        }
+
         print("   - 当前稳定性: \(Int(stability * 100))%")
+        print("   - 平均稳定性: \(Int(averageStability * 100))%（样本 \(stabilitySampleCount) 个）")
         
         // 计算得分
         var points = scorePerPluck
@@ -340,6 +352,7 @@ class RunningViewModel: ObservableObject {
         summary += String(format: L("时长: %d:%02d\n"), minutes, seconds)
         summary += String(format: L("弹奏: %d 次\n"), pluckCount)
         summary += String(format: L("距离: %d 米\n"), Int(distance))
+        summary += String(format: L("稳定性: %d%%\n"), Int(averageStability * 100))
         summary += String(format: L("得分: %d"), score)
         
         return summary
@@ -351,6 +364,9 @@ class RunningViewModel: ObservableObject {
         pluckCount = 0
         currentBPM = 0
         stability = 0
+        averageStability = 0
+        stabilitySum = 0
+        stabilitySampleCount = 0
         score = 0
         characterPosition = 0
         trackOffset = 0
@@ -382,6 +398,6 @@ class RunningViewModel: ObservableObject {
     
     // MARK: - Settings
     func setTargetBPM(_ bpm: Double) {
-        targetBPM = max(60, min(200, bpm)) // 限制在 60-200 BPM
+        targetBPM = max(60, min(Double(MetronomeManager.maximumBPM), bpm)) // 上限与节拍器一致
     }
 }

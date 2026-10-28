@@ -34,10 +34,30 @@ class FlowerViewModel: ObservableObject {
     @Published var isRolling: Bool = false // 是否正在轮指（控制动画）
     @Published var lastSequenceQuality: RollSequence.Quality? // 最近完成序列的质量
     @Published var pulseCounter: Int = 0 // ✨ 新增：花瓣脉冲计数器
-    
+    @Published var isStageResting: Bool = false // 是否正处于「长出一圈→停顿一下」的台阶停顿（供视图做呼吸动画）
+    @Published var bloomFlashCounter: Int = 0 // 优秀序列触发的金色光晕计数（每 +1 闪一次）
+    @Published var excellentStreak: Int = 0 // 连续「优秀」的序列数（中断即清零）
+    @Published var flowerLayers: Int = 1 // 花层数：连续优秀累积成重瓣，1~3 层
+    @Published var petalCloseCount: Int = 0 // 满花后已收拢的花瓣数（依次收拢用，0 表示未开始）
+    @Published var isClosing: Bool = false // 是否正处于「花瓣依次收拢」阶段
+
+    // MARK: - 速度达标（供视图把花色转金）
+    /// 当前轮指速度的等效 BPM = 次/秒 × 60 ÷ 每拍音数。
+    /// currentSpeed 是每秒的轮指音数，而 targetBPM 是节拍器速度，两者靠每拍音数换算。
+    var currentSpeedBPM: Double {
+        currentSpeed * 60.0 / notesPerBeat
+    }
+
+    /// 速度是否达到目标 BPM —— 达标即给出明确的视觉奖励（花色转金）
+    var isSpeedTargetMet: Bool {
+        currentSpeed > 0 && currentSpeedBPM >= targetBPM
+    }
+
     // 花朵循环状态：每长满一朵即归零重长，形成「生长→绽放→归零」的持续节奏
     private var flowerNotes: Int = 0        // 当前这朵花累计的音符数（区别于全局 rollCount）
     private var flowerBlooming: Bool = false // 是否正处于「绽放-归零」过渡期
+    private var stageRestTask: Task<Void, Never>? // 台阶停顿的延时任务（可被停止/重置取消）
+    private var closingTask: Task<Void, Never>? // 满花后「花瓣依次收拢」的任务（可被停止/重置取消）
     
     // ✨ 新增：节拍器
     let metronome = MetronomeManager()
@@ -63,7 +83,14 @@ class FlowerViewModel: ObservableObject {
     
     // MARK: - Constants
     private let maxPetals = 8 // 最多 8 片花瓣
-    private let notesPerPetal = 5 // 每 5 个音符长出一片花瓣
+    /// 每长出一片花瓣所需的音符数，也是控制开花快慢的唯一旋钮。
+    /// 长满一朵共需 maxPetals × notesPerPetal 个音符：原为 8×5=40（高速轮指约 3 秒即开满，
+    /// 用户反馈太快），现调为 8×14=112，开花过程约为原来的 2.8 倍时长。想再慢就调大这个值。
+    private let notesPerPetal = 14
+    /// 节拍器每响一下对应的轮指音数（五指轮一轮 5 个音）。用于把「次/秒」换算成等效 BPM
+    /// 后与目标 BPM 比较。若按四指轮练习，把这个值改成 4。
+    private let notesPerBeat: Double = 5
+    private let maxFlowerLayers = 3 // 重瓣最多 3 层
     private let scorePerNote: Int = 5 // 每个音符基础分
     private let scorePerSequence: Int = 50 // 每个完整序列奖励分
     private let idleTimeout: TimeInterval = 2.0 // 空闲超时：2秒无轮指视为停止
@@ -160,6 +187,15 @@ class FlowerViewModel: ObservableObject {
         // 取消空闲任务
         idleWorkItem?.cancel()
         idleWorkItem = nil
+
+        // 取消台阶停顿与花瓣收拢任务，避免停止后画面还在动
+        stageRestTask?.cancel()
+        stageRestTask = nil
+        closingTask?.cancel()
+        closingTask = nil
+        isStageResting = false
+        isClosing = false
+        petalCloseCount = 0
         
         if let start = startTime {
             sessionDuration = Date().timeIntervalSince(start)
@@ -246,12 +282,25 @@ class FlowerViewModel: ObservableObject {
         // 更新平均速度
         averageSpeed = completedSequences.map { $0.averageSpeed }.reduce(0, +) / Double(completedSequences.count)
         
-        // 更新均匀度
-        uniformity = completedSequences.map { $0.uniformity }.reduce(0, +) / Double(completedSequences.count)
+        // 按有效间隔数量加权；长而可靠的序列应比刚满 4 音的短序列更有代表性。
+        let totalWeight = completedSequences.reduce(0) { $0 + max(1, $1.noteCount - 1) }
+        uniformity = completedSequences.reduce(0.0) {
+            $0 + $1.uniformity * Double(max(1, $1.noteCount - 1))
+        } / Double(totalWeight)
         
         print("   - 累计平均速度: \(String(format: "%.1f", averageSpeed))次/秒")
         print("   - 累计均匀度: \(Int(uniformity * 100))%")
         
+        // 连续优秀 → 叠加花层次数（重瓣），把「连续弹得好」累积成看得见的奖励；
+        // 一旦评级掉下来就清零，重瓣消失，奖励与表现严格挂钩。
+        if sequence.quality == .excellent {
+            excellentStreak += 1
+            flowerLayers = min(maxFlowerLayers, 1 + excellentStreak / 2)
+        } else {
+            excellentStreak = 0
+            flowerLayers = 1
+        }
+
         // 序列奖励分
         var bonusScore = scorePerSequence
         
@@ -260,6 +309,7 @@ class FlowerViewModel: ObservableObject {
         case .excellent:
             bonusScore = Int(Double(bonusScore) * 2.0) // 2x
             print("   🌟 优秀！奖励: \(bonusScore)分")
+            bloomFlashCounter += 1 // 金色光晕：弹得好的即时正反馈
         case .good:
             bonusScore = Int(Double(bonusScore) * 1.5) // 1.5x
             print("   👍 良好！奖励: \(bonusScore)分")
@@ -281,19 +331,73 @@ class FlowerViewModel: ObservableObject {
     private func updateFlowerGrowth() {
         // 统计当前这朵花累计的音符数
         flowerNotes += 1
-        
-        // 处于「绽放-归零」过渡期时，只累计、不更新显示，避免重复触发归零
-        if flowerBlooming {
+
+        // 处于「绽放」或「依次收拢」过渡期时，只累计、不更新显示
+        if flowerBlooming || isClosing {
             return
         }
-        
-        let total = maxPetals * notesPerPetal // 长满一朵所需音符数（默认 8×5=40）
-        flowerGrowth = min(1.0, Double(flowerNotes) / Double(total))
-        petalCount = min(maxPetals, flowerNotes / notesPerPetal)
-        
-        // 长满一朵 → 触发绽放并归零，开始长下一朵
+
+        let total = maxPetals * notesPerPetal // 长满一朵所需音符数（当前 8×14=112）
+
+        // 长满一朵 → 直接绽放，不走台阶停顿
         if flowerNotes >= total {
+            petalCount = maxPetals
+            flowerGrowth = 1.0
             completeFlower()
+            return
+        }
+
+        // ⚠️ 停顿期间彻底冻结显示（音符照常累计），这一步必须放在「新长出一圈」判断之前。
+        // 旧实现把它写在后面，导致停顿期间一旦累计跨过下一级就立刻长出来并重新开始计时，
+        // 停顿等于从未发生——这正是「感觉不到停顿」的根因。
+        guard !isStageResting else { return }
+
+        let newPetalCount = min(maxPetals, flowerNotes / notesPerPetal)
+
+        // 新长出一圈：花瓣跳到这一圈的台阶大小，然后停一下再继续长
+        if newPetalCount > petalCount {
+            petalCount = newPetalCount
+            flowerGrowth = Double(newPetalCount) / Double(maxPetals)
+            beginStageRest()
+            return
+        }
+
+        // 同一圈内平滑推进
+        flowerGrowth = min(1.0, Double(flowerNotes) / Double(total))
+    }
+
+    /// 每长出一圈的停顿时长（秒），与演奏质量挂钩：
+    /// 弹得越稳，停顿越短越顺；越不均匀，停顿越久，像花「攒着劲」才肯再长。
+    /// 差距刻意拉开（0.25 ~ 1.25 秒，相差 5 倍），让「弹得差」明显更迟滞。
+    private var stageRestDuration: TimeInterval {
+        if let quality = lastSequenceQuality {
+            switch quality {
+            case .excellent: return 0.25
+            case .good: return 0.55
+            case .fair: return 0.90
+            case .needsImprovement: return 1.25
+            }
+        }
+        // 尚无任何序列评级时，按当前均匀度折算（最不稳时约 1.2 秒）
+        return 0.5 + (1 - uniformity) * 0.7
+    }
+
+    private func beginStageRest() {
+        isStageResting = true
+        stageRestTask?.cancel()
+        let duration = stageRestDuration
+        stageRestTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+            guard let self = self else { return }
+            self.isStageResting = false
+            // 补上停顿期间被冻结的真实生长量，避免花看起来「漏长」。
+            // 用 spring 补，视觉上是「憋住了 → 继续长」。
+            guard !self.flowerBlooming && !self.isClosing else { return }
+            let total = self.maxPetals * self.notesPerPetal
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) {
+                self.petalCount = min(self.maxPetals, self.flowerNotes / self.notesPerPetal)
+                self.flowerGrowth = min(1.0, Double(self.flowerNotes) / Double(total))
+            }
         }
     }
     
@@ -310,27 +414,70 @@ class FlowerViewModel: ObservableObject {
     /// 最大后永久定住。改为每长满一朵即归零重长，与轮指练习自然形成节奏感。
     private func completeFlower() {
         flowerBlooming = true
-        
+
+        // 满花绽放时取消尚未结束的台阶停顿，避免绽放期还在「呼吸」
+        stageRestTask?.cancel()
+        isStageResting = false
+
         // 绽放：花心与花瓣全开、亮度拉满
         withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
             flowerGrowth = 1.0
             flowerBrightness = 1.0
         }
         
-        // 停留约 1.8 秒让用户看清满花，再归零长下一朵
-        Task {
-            try? await Task.sleep(nanoseconds: 1_800_000_000)
-            await MainActor.run { [weak self] in
-                guard let self = self else { return }
-                if self.isRunning {
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        self.flowerGrowth = 0.0
-                        self.petalCount = 0
-                        self.flowerNotes = 0
-                    }
-                }
-                self.flowerBlooming = false
+        // 停留约 4 秒让用户看清满花，再依次收拢花瓣、归零长下一朵
+        closingTask?.cancel()
+        closingTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            self?.beginPetalClosing()
+        }
+    }
+
+    /// 满花后花瓣「依次」收拢，而不是整朵一下子消失——收完再归零长下一朵。
+    /// 每片间隔 0.13 秒，8 片约 1 秒收完，视觉上是花瓣一片片合回去。
+    private func beginPetalClosing() {
+        guard isRunning else {
+            // 已停止练习：直接归零，不做收拢动画
+            withAnimation(.easeOut(duration: 0.35)) {
+                flowerGrowth = 0
+                petalCount = 0
+                flowerNotes = 0
             }
+            petalCloseCount = 0
+            isClosing = false
+            flowerBlooming = false
+            return
+        }
+
+        isClosing = true
+        petalCloseCount = 0
+        let totalPetals = maxPetals
+
+        closingTask = Task { @MainActor [weak self] in
+            guard let self = self else { return }
+
+            for i in 1...totalPetals {
+                try? await Task.sleep(nanoseconds: 130_000_000)
+                if Task.isCancelled { return }
+                withAnimation(.easeInOut(duration: 0.24)) {
+                    self.petalCloseCount = i
+                }
+            }
+
+            try? await Task.sleep(nanoseconds: 320_000_000)
+            if Task.isCancelled { return }
+            withAnimation(.easeInOut(duration: 0.35)) {
+                self.flowerGrowth = 0
+                self.petalCount = 0
+                self.flowerNotes = 0
+            }
+
+            // 收拢状态稍后再清，避免新花刚发芽就带着「已收拢」的缩放
+            try? await Task.sleep(nanoseconds: 420_000_000)
+            if Task.isCancelled { return }
+            self.petalCloseCount = 0
+            self.isClosing = false
+            self.flowerBlooming = false
         }
     }
     
@@ -350,7 +497,9 @@ class FlowerViewModel: ObservableObject {
         if let quality = lastSequenceQuality {
             switch quality {
             case .excellent:
-                statusMessage = "🌟 完美轮指！继续保持！"
+                statusMessage = excellentStreak >= 2
+                    ? "🌟 连续 \(excellentStreak) 次完美！重瓣 ×\(flowerLayers)"
+                    : "🌟 完美轮指！继续保持！"
             case .good:
                 statusMessage = "👍 轮指良好，再快一点更好！"
             case .fair:
@@ -414,6 +563,16 @@ class FlowerViewModel: ObservableObject {
         flowerSymmetry = 1.0
         flowerNotes = 0
         flowerBlooming = false
+        stageRestTask?.cancel()
+        stageRestTask = nil
+        closingTask?.cancel()
+        closingTask = nil
+        isStageResting = false
+        isClosing = false
+        petalCloseCount = 0
+        bloomFlashCounter = 0
+        excellentStreak = 0
+        flowerLayers = 1
         sessionDuration = 0
         isRolling = false
         lastSequenceQuality = nil

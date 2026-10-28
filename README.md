@@ -274,6 +274,26 @@ v1.0 through v1.3 were built as the Chinese edition between late September and e
 - The Fingering Coach now shows an alert when analysis stops without enough Pipa-sound evidence, instead of silently leaving the report blank
 - The start/stop analysis button was moved up from the bottom edge, clear of the home indicator, so it is easier to tap
 
+### v2.5 · Technique visualizations, practice companions and stability (2026-10-27)
+
+- Sweep detection rewritten with a physically meaningful direction cue: the spectral centroid trend (via an FFT) now tells an up-sweep from a down-sweep, instead of comparing raw peak levels which had no physical meaning; sweep strength is normalized from each note's peak amplitude, and the direction-balance metric is corrected so a balanced session can actually reach 100%
+- Tremolo Bloom (轮指花开) reworked: petals now grow in stages with a breathing pause between stages, fully bloomed flowers close petal by petal, reaching the speed target turns the bloom gold, and sustained excellent runs accumulate extra layers (重瓣); the notes-per-petal threshold was widened from 5 to 14 so the bloom no longer triggers too eagerly
+- Metronome gains a Mute sound option (red/green light only, no tick) and the BPM ceiling was raised to 416 to cover fast tremolo practice
+- Pluck (弹挑) stability measurement tightened: onset timing now locates the true attack inside each 64 ms buffer with a peak-search, and the jitter curve was relaxed (noise floor 0.006, coefficient halved) so a steady metronome run scores in a realistic 70–90% range instead of ~50%
+- Pluck session summary now reports the whole-session average stability instead of the last instantaneous reading
+- Roll (滚指) uniformity scoring refined with a median + MAD tolerance that drops outlier intervals, stabilizing the evenness score
+- The three interface languages and the unit tests were updated to match the new keys (Mute, Range, Stability)
+
+### v2.6 · Coaching score reliability fixes (2026-10-28)
+
+- The Fingering Coach's evaluation report was scoring far lower than the actual playing on a normal session. The whole scoring chain was reviewed and the structural flaws were fixed rather than the thresholds loosened:
+  - The rhythm dimension no longer collapses to zero when fewer than 4 onsets are detected; short sessions now get a conservative floor score instead of losing the whole 25% weight
+  - Playing-stability now averages only the sub-metrics that actually have data, instead of averaging five items and scoring a hard zero for any missing one, so a missing pitch or hand-shape sample no longer drags the whole dimension down
+  - Dynamic-stability was computed on per-frame RMS, whose natural pluck-decay sawtooth makes the coefficient of variation explode to zero; it now measures the coefficient of variation across the peak envelope of each plucked note
+  - Timbre-stability's zero-crossing-rate series now excludes silent frames, removing the huge deviation between silent and voiced frames
+  - Pluck / tremolo rhythm scoring had a unit mismatch: a fingertip displacement value was compared against a frequency (Hz) range, so it always fell into the "too slow" branch; the scoring now maps displacement magnitude to motion intensity correctly
+  - On-device logging of the real tiger-mouth angle and wrist-speed distributions was added, to calibrate the remaining hand-shape thresholds with first-hand measurements before changing them
+
 ## Known Limitations / To Be Improved
 
 - Classifier precision is still limited by the training data distribution. If the real-device console shows `rms > 0.05` but `pipa < 0.3`, the model's discriminative power is insufficient for the current microphone sound quality, and it needs to be retrained with the Create ML Sound Analysis template (≥ 30 clips of 16 kHz audio per class; a clearly better model can usually be produced within 30 minutes)
@@ -554,6 +574,26 @@ v1.0 到 v1.3 是 2026 年 9 月底到 10 月初以中文版形态走完的四�
 - 手型、虎口角度、节奏、手腕位置四个评分维度现在对每种技法都打分。此前每种技法只产出其中一部分，固定评分面板总有一项显示为零；虎口角度改为对全部技法由手姿统一计算，轮指也补上了手型维度
 - 指法教练在停止分析但琵琶声证据不足时弹出提示，而不是默默留空报告
 - 开始/停止分析按钮从屏幕底边上移，避开 Home 指示条，更好点按
+
+### v2.5 · 技法可视化、陪练打磨与稳定性(2026-10-27)
+
+- 扫弦判定重写，方向改用有物理意义的判据：用 FFT 频谱质心走向区分上扫与下扫，取代原来"比较原始峰值大小"这种没有物理含义的写法；扫弦力度按每次起音的峰值振幅做归一化，方向平衡公式也修正为均衡练习能真正拿到满分
+- 轮指花开重做：花瓣分阶段生长、阶段之间留呼吸停顿，满花后花瓣依次收拢，达到速度目标转金色，连续优秀累积成重瓣；每瓣所需音符数从 5 放宽到 14，花开不再一碰就开
+- 节拍器新增「静音」音色（只有红/绿灯、不响），BPM 上限提到 416，覆盖快速轮指练习
+- 弹挑稳定性测量收紧：起音时刻改为在每块 64 毫秒缓冲内用峰值搜索定位真正的击弦点，抖动曲线放宽（噪声地板 0.006、系数减半），稳定跟节拍器练习能落到 70–90% 的合理区间，而不是约 50%
+- 弹挑练习结算改为展示整场平均稳定性，而非停止瞬间的最后一次瞬时值
+- 滚指均匀度评分改用中位数 + MAD 容差剔除离群间隔，使均匀度评分更稳定
+- 三种界面语言与单元测试同步更新，匹配新增键（静音 / 范围 / 稳定性）
+
+### v2.6 · 教练评分可靠性修复(2026-10-28)
+
+- 指法教练生成的评价报告在正常练习下分数明显偏低。重新审视整条评分链路后，修复的是结构性缺陷，而不是调松阈值：
+  - 节奏维度不再因起音少于 4 次就直接归零；短曲练习改为给一个保守保底分，不再吃光 25% 的权重
+  - 演奏稳定性改为只平均真正有数据的子项，不再把五项硬平均、缺一项就记 0，因此漏采到音高或手型样本时，整维度不会被拖垮
+  - 力度稳定性原本按逐帧 RMS 计算，而拨弦 RMS 天然是"尖峰—衰减"的锯齿，变异系数必然爆表恒为 0；现改为取每次起音的峰值包络再算离散度
+  - 音色稳定性的过零率序列现在排除静音帧，消除有声段与静音段过零率差异巨大造成的爆表
+  - 弹挑 / 轮指的节奏评分存在单位错配：指尖位移量被当成频率(Hz)区间去比对，恒判"太慢"；现改按位移量级映射运动强度
+  - 新增真机日志，打印真实虎口角角度与手腕速度分布，待拿到一手数据后再标定剩余的手型阈值
 
 ## 已知限制 / 待改进
 

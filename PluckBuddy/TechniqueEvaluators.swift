@@ -280,16 +280,13 @@ class PluckPostureEvaluator {
     }
 
     private func evaluateRhythm(frequency: Double) -> Double {
-        // 理想频率：每秒 2-4 次拨弦
-        let idealRange = (0.2...0.4)
-        if idealRange.contains(frequency) {
-            return 90
-        } else if frequency < 0.1 {
-            return 60 // 太慢
-        } else if frequency > 0.5 {
-            return 70 // 太快
-        } else {
-            return 80
-        }
+        // 注意：MotionFeatureExtractor.calculateMovementFrequency 返回的并非频率(Hz)，
+        // 而是「最近几帧食指指尖平均位移」（归一化坐标），反映右手拨弦的运动活跃度。
+        // 弹挑正常位移约 0.03–0.10，扫弦更大。原代码把它当频率(HZ)去比对 0.2–0.4 区间
+        // 根本命中不了，导致弹挑节奏维度恒为 60 分。这里改为按位移量级映射运动强度评分。
+        if frequency < 0.01 { return 60 }                       // 几乎没动 / 太慢
+        if frequency > 0.15 { return 70 }                        // 手忙脚乱 / 太快
+        if frequency >= 0.03 && frequency <= 0.10 { return 90 }  // 适中，标准拨弦
+        return 80                                                // 边界区间
     }
 }

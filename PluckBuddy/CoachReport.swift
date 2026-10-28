@@ -320,6 +320,11 @@ final class SessionAudioAnalyzer {
 
     private var rollIOIs: [Double] = []            // 轮指段内的起音间隔
 
+    // 力度稳定性改用「每次起音的峰值包络」而非逐帧 RMS：
+    // 拨弦 RMS 天然呈尖峰—衰减锯齿，逐帧 CV 必然爆表、与力度控制无关。
+    private var notePeakRMS: [Double] = []         // 每个被确认起音的峰值 RMS
+    private var currentPeak: Double = 0            // 当前活跃段内跟踪的局部峰值
+
     private var currentTechnique: TechniqueType = .unknown
     private var techniqueObsTotal = 0
     private var techniqueObsKnown = 0
@@ -430,6 +435,8 @@ final class SessionAudioAnalyzer {
         envSlow = 0
         wasActive = false
         rollIOIs.removeAll()
+        notePeakRMS.removeAll()
+        currentPeak = 0
         currentTechnique = .unknown
         techniqueObsTotal = 0
         techniqueObsKnown = 0
@@ -448,6 +455,7 @@ final class SessionAudioAnalyzer {
         let tonalFrames: Int
         let onsetTimes: [Double]
         let rollIOIs: [Double]
+        let notePeakRMS: [Double]
         let techniqueObsTotal: Int
         let techniqueObsKnown: Int
         let postureScores: [Double]
@@ -466,6 +474,7 @@ final class SessionAudioAnalyzer {
             tonalFrames: tonalFrames,
             onsetTimes: onsetTimes,
             rollIOIs: rollIOIs,
+            notePeakRMS: notePeakRMS,
             techniqueObsTotal: techniqueObsTotal,
             techniqueObsKnown: techniqueObsKnown,
             postureScores: postureScores,
@@ -492,10 +501,8 @@ final class SessionAudioAnalyzer {
         let zcrD = Double(zcr) / Double(window.count)
 
         rmsHistory.append(rmsD)
-        zcrHistory.append(zcrD)
 
         let active = rmsD > 0.01
-        if active { activeFrames += 1 }
 
         // 局部自适应基线起音检测：用「当前 RMS vs 慢包络(envSlow)」的通量，
         // 与绝对音量解耦。envSlow 的 tau≈180ms，既能贴住单次拨弦的衰减，
@@ -504,6 +511,12 @@ final class SessionAudioAnalyzer {
         envSlow = envSlow * 0.70 + rmsD * 0.30
 
         if active {
+            activeFrames += 1
+            // 仅活跃帧进入音色稳定性统计，排除静音段的随机过零（修复：静音帧把 ZCR 变异系数拉爆）
+            zcrHistory.append(zcrD)
+            // 跟踪当前活跃段内的局部峰值，供力度稳定性使用
+            currentPeak = max(currentPeak, rmsD)
+
             if let freq = estimatePitch(window), freq > 60, freq < 1200 {
                 let cents = centsDeviation(freq)
                 pitchCents.append(cents)
@@ -532,9 +545,15 @@ final class SessionAudioAnalyzer {
                         if maxDev > median * 0.35 { worstOnsetIndex = maxIdx }
                     }
                 }
+                // 记录上一活跃段的峰值作为本次拨弦的力度，随后重置当前段峰值
+                notePeakRMS.append(currentPeak)
                 onsetTimes.append(time)
                 lastOnsetTime = time
+                currentPeak = rmsD
             }
+        } else {
+            // 跨静音段时清零局部峰值，避免把上一段的峰值带入下一个音
+            currentPeak = 0
         }
 
         wasActive = active
@@ -653,13 +672,17 @@ final class SessionAudioAnalyzer {
         var noteValueAcc = 0.0
         var rushDragCount = 0
         var consistency = 0.0
-        if onsetTimes.count >= 4 {
+        // 起音不足 4 次不再把整个维度硬记 0：
+        // hasSufficientEvidence 最低只要 2 次起音就能出报告，短曲直接 0 分会凭空吃掉 25% 权重。
+        // 改为样本足够时用真实一致性；样本少时给保守保底分，等乐句够长再收紧。
+        let onsetCount = onsetTimes.count
+        if onsetCount >= 2 {
             let iois = zip(onsetTimes, onsetTimes.dropFirst()).map { $1 - $0 }
             let meanIOI = iois.reduce(0, +) / Double(iois.count)
             let std = stddev(iois)
             avgBeatDevMs = std * 1000
             let cv = meanIOI > 0 ? std / meanIOI : 1
-            consistency = max(0, 100 - cv * 250)
+            consistency = onsetCount >= 4 ? max(0, 100 - cv * 250) : max(45, 100 - cv * 250)
             let tempo = 60 / meanIOI
             let tempoCloseness: Double = piece.targetTempoBPM == nil ? 85 :
                 max(0, 100 - abs(tempo - piece.targetTempoBPM!) / piece.targetTempoBPM! * 100)
@@ -669,23 +692,36 @@ final class SessionAudioAnalyzer {
         }
 
         // ===== 维度四：演奏稳定性（音频 + 视频手型稳定度）=====
-        let pitchStability: Double = pitchCents.isEmpty ? 0 :
-            max(0, 100 - stddev(pitchCents.map { abs($0) }) * 4)
+        // 子项在缺数据时保留 0 供详情展示，但计入平均时剔除（不把“没数据”记成 0 分拉低总分）。
+        let pitchValid = !pitchCents.isEmpty
+        let pitchStability: Double = pitchValid ?
+            max(0, 100 - stddev(pitchCents.map { abs($0) }) * 4) : 0
         let activeRMS = rmsHistory.filter { $0 > 0.02 }
-        let dynStability: Double = activeRMS.isEmpty ? 0 : {
-            let m = activeRMS.reduce(0, +) / Double(activeRMS.count)
-            let cv = m > 0 ? stddev(activeRMS) / m : 1
+        let dynValid = !activeRMS.isEmpty && snapshot.notePeakRMS.count >= 3
+        let dynStability: Double = dynValid ? {
+            // 用每次起音的峰值包络衡量力度一致性，避免被“尖峰—衰减”锯齿的逐帧 RMS 拉爆
+            let peaks = snapshot.notePeakRMS
+            let m = peaks.reduce(0, +) / Double(peaks.count)
+            let cv = m > 0 ? stddev(peaks) / m : 1
             return max(0, 100 - cv * 150)
-        }()
-        let timbreStability: Double = zcrHistory.isEmpty ? 0 : {
+        }() : 0
+        let timbreValid = !zcrHistory.isEmpty
+        let timbreStability: Double = timbreValid ? {
             let m = zcrHistory.reduce(0, +) / Double(zcrHistory.count)
             let cv = m > 0 ? stddev(zcrHistory) / m : 1
             return max(0, 100 - cv * 200)
-        }()
-        let rhythmConsistency = onsetTimes.count >= 4 ? consistency : 0
-        let stabilityScore = clamp(
-            (pitchStability + dynStability + timbreStability + rhythmConsistency + postureStability) / 5
-        )
+        }() : 0
+        let rhythmValid = onsetCount >= 2
+        let rhythmConsistency: Double = rhythmValid ? consistency : 0
+        // 稳定性五项硬平均 → 改为仅对有效子项平均，缺项不参与
+        let stabilityParts: [Double] = [
+            (pitchStability, pitchValid),
+            (dynStability, dynValid),
+            (timbreStability, timbreValid),
+            (rhythmConsistency, rhythmValid),
+            (postureStability, !postureScores.isEmpty)
+        ].compactMap { $0.1 ? $0.0 : nil }
+        let stabilityScore = stabilityParts.isEmpty ? 60.0 : clamp(stabilityParts.reduce(0, +) / Double(stabilityParts.count))
 
         // ===== 综合（权重：指法 30 / 颗粒 25 / 节奏 25 / 稳定 20）=====
         let overall = 0.30 * fingeringScore + 0.25 * articulationScore + 0.25 * rhythmScore + 0.20 * stabilityScore

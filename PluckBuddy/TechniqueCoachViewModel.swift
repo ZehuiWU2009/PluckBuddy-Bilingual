@@ -100,6 +100,7 @@ class TechniqueCoachViewModel: ObservableObject {
     /// 否则一旦轮指先 commit，弹挑就再难凑满连续 6 帧来翻盘，UI 会卡死在轮指。
     private var recentTechniques: [TechniqueType] = []
     private let techniqueWindowSize = 9   // 约 0.3 秒（按 30 fps 计），缩小窗口以降低 UI 滞后
+    private var coachDebugFrameCounter = 0   // 调试日志限频计数（虎口角/手腕速度分布，待真机标定）
     
     private var startTime: Date?
     private var durationTimer: Timer?
@@ -334,6 +335,14 @@ class TechniqueCoachViewModel: ObservableObject {
 
                 // 把真实视频手型评估喂给报告分析器（后续与音频分析融合生成评价报告）
                 audioAnalyzer.recordPosture(evaluation: currentEvaluation!)
+
+                // 🔬 调试：打印真实虎口角与手腕速度分布，供真机标定阈值（条目 9、10）
+                coachDebugFrameCounter += 1
+                if coachDebugFrameCounter % 30 == 0 {
+                    let ws = hypot(Double(features.wristVelocity.dx), Double(features.wristVelocity.dy))
+                    let avgFinger = features.fingerVelocities.map { hypot(Double($0.dx), Double($0.dy)) }.reduce(0, +) / Double(features.fingerVelocities.count)
+                    print("📐 虎口角: \(String(format: "%.1f", features.tigerMouthAngle))°  手腕速度: \(String(format: "%.3f", ws))  指尖均速: \(String(format: "%.3f", avgFinger))")
+                }
 
                 updateStatusMessage()
             } else {

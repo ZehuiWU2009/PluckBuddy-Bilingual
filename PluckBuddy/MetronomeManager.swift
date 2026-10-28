@@ -16,11 +16,19 @@ enum MetronomeSoundType: String, CaseIterable, Identifiable {
     case woodblock = "木鱼"
     case drum = "鼓声"
     case mechanical = "机械"
+    /// 静音：不发声，仅靠节拍灯（重拍红、其余绿）提示拍点
+    case mute = "静音"
     
     var id: String { rawValue }
 
     /// 本地化显示名（rawValue 仍作持久化 key，不能改）
     var displayName: String { L(rawValue) }
+    
+    /// 是否静音（不播放任何滴答声，只保留红/绿节拍灯）
+    var isSilent: Bool {
+        if case .mute = self { return true }
+        return false
+    }
     
     var icon: String {
         switch self {
@@ -28,6 +36,7 @@ enum MetronomeSoundType: String, CaseIterable, Identifiable {
         case .woodblock: return "circle.fill"
         case .drum: return "circle.hexagongrid.fill" // 系统符号库里没有鼓类符号，用鼓面网格替代
         case .mechanical: return "waveform"
+        case .mute: return "speaker.slash"
         }
     }
 }
@@ -73,9 +82,18 @@ class MetronomeManager: ObservableObject {
     
     // MARK: - Constants
     
-    let minBPM = 36
-    let maxBPM = 220
+    /// BPM 允许范围。滑块、加减按钮、各处钳制统一引用这两个常量，避免多处硬编码不一致。
+    static let minimumBPM = 36
+    static let maximumBPM = 416
+
+    let minBPM = MetronomeManager.minimumBPM
+    let maxBPM = MetronomeManager.maximumBPM
     let beatsPerMeasure = 4
+
+    /// 滴答间隔（秒）。标准节拍器：每分钟 BPM 下，间隔 = 60 / BPM。
+    private var tickInterval: TimeInterval {
+        60.0 / Double(bpm)
+    }
     
     // MARK: - Private Properties
     
@@ -137,7 +155,7 @@ class MetronomeManager: ObservableObject {
         isPlaying = true
         currentBeat = 0
         
-        let interval = 60.0 / Double(bpm)
+        let interval = tickInterval
         
         // ✨ 延迟一小段时间再播放第一个节拍，确保 IO 线程准备好
         Task { @MainActor in
@@ -202,6 +220,7 @@ class MetronomeManager: ObservableObject {
     }
     
     private func playBeat() {
+        // 拍号先推进：静音（缓冲区为 nil）时下面直接返回，节拍灯仍按拍号闪烁
         currentBeat = (currentBeat % beatsPerMeasure) + 1
         
         let buffer = (currentBeat == 1) ? tockBuffer : tickBuffer
@@ -223,7 +242,7 @@ class MetronomeManager: ObservableObject {
         print("🔄 更新定时器间隔 - 新 BPM: \(bpm)")
         // 重新创建定时器，使用新的间隔
         timer?.invalidate()
-        let interval = 60.0 / Double(bpm)
+        let interval = tickInterval
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.playBeat()
@@ -247,6 +266,10 @@ class MetronomeManager: ObservableObject {
             // 重拍（tick）更亮更高，其余拍（tock）略低，模拟机械节拍器 tick-tock
             tickBuffer = createMechanicalBuffer(frequency: 2600, duration: 0.05)
             tockBuffer = createMechanicalBuffer(frequency: 1900, duration: 0.06)
+        case .mute:
+            // 静音：清空缓冲区，playBeat 走到空缓冲区直接返回，只保留节拍灯闪烁
+            tickBuffer = nil
+            tockBuffer = nil
         }
     }
     

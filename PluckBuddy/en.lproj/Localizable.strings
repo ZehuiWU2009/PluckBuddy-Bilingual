@@ -154,6 +154,7 @@
 "张伟" = "Wei Zhang";
 "弱" = "Weak";
 "弹奏: %d 次\n" = "Plucks: %d times\n";
+"稳定性: %d%%\n" = "Stability: %d%%\n";
 "弹得真好！向你学习 🎵" = "Beautiful playing! I can learn from you 🎵";
 "弹拨搭子" = "PluckBuddy";
 "弹拨高手" = "Plucking Pro";
@@ -325,7 +326,7 @@
 "节拍器将以您设定的目标速度播放，帮助您保持稳定的节奏" = "The metronome plays at your target speed to help you keep a steady rhythm";
 "节拍器将使用与练习相同的速度（" = "The metronome uses the same tempo as your practice (";
 "节拍器音色" = "Metronome Sound";
-"范围: 36-220 BPM" = "Range: 36-220 BPM";
+"范围" = "Range";
 "虎口自然" = "Natural tiger mouth";
 "虎口自然张开" = "Tiger mouth opens naturally";
 "虎口角度" = "Tiger Mouth Angle";
@@ -863,4 +864,5 @@
 "已检测到琵琶声，正在分析音高…" = "Pipa detected — analyzing pitch…";
 "琵琶概率 %.0f%%" = "Pipa probability %.0f%%";
 "机械" = "Mechanical";
+"静音" = "Mute";
 "有效演奏数据不足，请实际弹奏后再试" = "Not enough valid performance data. Please play and try again.";
