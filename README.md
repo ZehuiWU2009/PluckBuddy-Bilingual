@@ -40,6 +40,7 @@ A self-trained four-class model is built in: `PipaSoundClassifier.mlmodel`. Its 
 - **On-device inference**: runs on the iPhone Neural Engine via `MLModel.prediction`; a single inference takes under 80 ms
 - **Zero network dependency**: the whole inference is completed locally; no audio clip is ever uploaded
 - **Precision optimization at the engineering layer**: the model itself is untouched. The threshold is 0.35 with a 2-frame moving average, plus energy gating that classifies low-RMS frames as background, and the inference step is 8000 frames instead of 15600 so consecutive windows overlap
+- **Training data published**: the four-class recordings used to train this model are released at [github.com/ZehuiWU2009/PipaSoundDataset](https://github.com/ZehuiWU2009/PipaSoundDataset) (CC BY 4.0), so the experiment is reproducible and the recording process is documented there
 
 ### Contribution 3 · Real-Time Algorithms: 4096-Point FFT + Kalman Filtering
 
@@ -342,6 +343,7 @@ Source code of a personal project; discussion and learning welcome.
 - **端侧推理**：`MLModel.prediction` 跑在 iPhone 神经引擎上，单次推理不到 80 ms
 - **零网络依赖**：整个推理在本地完成，不上传任何音频片段
 - **工程层精度优化**：不动模型本身，改用阈值 0.35 加 2 帧滑动平均，再加一道能量门控，低 RMS 的安静帧直接判 background，推理步长也从 15600 帧改成 8000 帧形成重叠窗口
+- **训练数据已公开**：训练该模型所用的四分类录音已发布在 [github.com/ZehuiWU2009/PipaSoundDataset](https://github.com/ZehuiWU2009/PipaSoundDataset)(CC BY 4.0)，便于复现本实验，录音与预处理流程也一并记录在仓库里
 
 ### 贡献 3 · 4096 点 FFT + 卡尔曼滤波的实时算法
 
