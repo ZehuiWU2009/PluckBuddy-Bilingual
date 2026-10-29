@@ -163,12 +163,6 @@ struct HistorySection: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 100)
             } else {
-                if !sessions.isEmpty {
-                    ForEach(sessions, id: \.id) { session in
-                        SessionRow(session: session)
-                    }
-                }
-
                 if !store.reports.isEmpty {
                     Text(L("评价报告"))
                         .font(.headline)
@@ -176,6 +170,15 @@ struct HistorySection: View {
                     ForEach(store.reports) { report in
                         CoachReportHistoryRow(report: report)
                             .onTapGesture { selectedReport = report }
+                    }
+                }
+
+                if !sessions.isEmpty {
+                    Text(L("游戏得分"))
+                        .font(.headline)
+                        .padding(.top, 4)
+                    ForEach(sessions, id: \.id) { session in
+                        SessionRow(session: session)
                     }
                 }
             }

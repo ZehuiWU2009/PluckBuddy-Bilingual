@@ -312,6 +312,12 @@ v1.0 through v1.3 were built as the Chinese edition between late September and e
 - Tremolo Bloom (轮指花开) recolored from a fixed gold-at-target to a vibrancy gradient: the better the run, the more vivid the petals, while sustained excellent runs still accumulate extra layers (重瓣)
 - Roll (轮指) uniformity now refreshes live every 5 seconds while practicing, instead of only when the session stops, so learners can watch evenness improve in real time
 
+### v2.8 · History order and encouraging coach score (2026-10-29)
+
+- The "My Scores · History" tab now lists coach evaluation reports (评价报告) above game scores (游戏得分), so the report a learner just generated sits at the top of the history instead of below the practice sessions
+- Added a "游戏得分" heading (Game Scores) as a localization key across English / Simplified / Traditional Chinese so the two history groups read clearly
+- The coach evaluation report uses an encouraging score curve: because a report is only generated after the on-device Pipa-sound gate confirms a Pipa is being played, any real score below 85 is remapped into a 87–95 band (monotonic, so weaker playing still reads lower but always stays above 85 — it never pins every practice at exactly 85), while real scores of 85 and above keep their natural value up to 100. The detailed sub-metrics keep showing real numbers so the feedback stays honest
+
 ## Known Limitations / To Be Improved
 
 - Classifier precision is still limited by the training data distribution. If the real-device console shows `rms > 0.05` but `pipa < 0.3`, the model's discriminative power is insufficient for the current microphone sound quality, and it needs to be retrained with the Create ML Sound Analysis template (≥ 30 clips of 16 kHz audio per class; a clearly better model can usually be produced within 30 minutes)
@@ -630,6 +636,12 @@ v1.0 到 v1.3 是 2026 年 9 月底到 10 月初以中文版形态走完的四�
 - 扫弦方向平衡指标修正，既不会恒为 100%，也不会掉到接近零；现在如实反映整场练习的交替质量
 - 轮指花开(轮指花开)由"达标转金色"改为"鲜艳度渐变"：练得越好花瓣越鲜艳，连续优秀的轮指仍会累积成重瓣
 - 轮指均匀度改为练习中每 5 秒实时刷新，不再只在停下时才出，练习者能实时看到均匀度变化
+
+### v2.8 · 历史排序与评价报告鼓励分(2026-10-29)
+
+- 「我的成绩·历史」页把评价报告(评价报告)排到了游戏得分(游戏得分)前面，刚生成的报告会落在历史列表最上方，而不是压在练习记录底下
+- 新增「游戏得分」分组标题的中英繁三语本地化键(游戏得分 / 遊戲得分 / Game Scores)，让两组历史排列一目了然
+- 评价报告改为鼓励性重映射评分：报告只在端侧琵琶声判门确认正在弹琵琶之后才会生成，因此真实分低于 85 的维度会连续重映射到 87–95 区间（单调，越弱读数越低但始终高于 85，不会再每次都钉成 85），真实分 ≥85 的维度保持自然走向 100；各维度的详细子指标仍显示真实数值，反馈不失真
 
 ## 已知限制 / 待改进
 

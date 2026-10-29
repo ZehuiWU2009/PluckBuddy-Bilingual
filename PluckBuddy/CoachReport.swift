@@ -724,14 +724,33 @@ final class SessionAudioAnalyzer {
         let stabilityScore = stabilityParts.isEmpty ? 60.0 : clamp(stabilityParts.reduce(0, +) / Double(stabilityParts.count))
 
         // ===== 综合（权重：指法 30 / 颗粒 25 / 节奏 25 / 稳定 20）=====
-        let overall = 0.30 * fingeringScore + 0.25 * articulationScore + 0.25 * rhythmScore + 0.20 * stabilityScore
+        // 鼓励性评分：能走到这里说明 hasSufficientEvidence 已通过（已检测到琵琶声）。
+        // 不直接把低分硬夹到 85（那样弱一点的练习每次都显示 85），而是把低分区间
+        // 连续重映射到 87–95——既保证“高于 85 分”，又保留随真实表现变化的区分度；
+        // 真实分 ≥85 时保持自然，可继续走高到 100。
+        let pipaHeardFloor: Double = 85
+        func encouragingScore(_ raw: Double) -> Double {
+            let r = min(max(raw, 0), 100)
+            if r <= pipaHeardFloor {
+                // 0 → 87，85 → 95，单调上升，绝不会出现“每次都是 85”
+                return 87 + (r / pipaHeardFloor) * 8
+            } else {
+                // 85 → 95，100 → 100，与上段在 85 处连续
+                return 95 + ((r - pipaHeardFloor) / 15) * 5
+            }
+        }
+        let overall = encouragingScore(0.30 * fingeringScore + 0.25 * articulationScore + 0.25 * rhythmScore + 0.20 * stabilityScore)
 
-        // ===== 维度卡片 =====
+        // ===== 维度卡片（展示分经鼓励性重映射，评语同步用重映射后的分数）=====
+        let fingeringShown = encouragingScore(fingeringScore)
+        let articulationShown = encouragingScore(articulationScore)
+        let rhythmShown = encouragingScore(rhythmScore)
+        let stabilityShown = encouragingScore(stabilityScore)
         let dimensions = [
-            CoachReport.DimensionScore(title: L("指法准确度"), score: fingeringScore, weight: 30, comment: gradeComment(fingeringScore)),
-            CoachReport.DimensionScore(title: L("演奏颗粒度"), score: articulationScore, weight: 25, comment: gradeComment(articulationScore)),
-            CoachReport.DimensionScore(title: L("节奏准确性"), score: rhythmScore, weight: 25, comment: gradeComment(rhythmScore)),
-            CoachReport.DimensionScore(title: L("演奏稳定性"), score: stabilityScore, weight: 20, comment: gradeComment(stabilityScore)),
+            CoachReport.DimensionScore(title: L("指法准确度"), score: fingeringShown, weight: 30, comment: gradeComment(fingeringShown)),
+            CoachReport.DimensionScore(title: L("演奏颗粒度"), score: articulationShown, weight: 25, comment: gradeComment(articulationShown)),
+            CoachReport.DimensionScore(title: L("节奏准确性"), score: rhythmShown, weight: 25, comment: gradeComment(rhythmShown)),
+            CoachReport.DimensionScore(title: L("演奏稳定性"), score: stabilityShown, weight: 20, comment: gradeComment(stabilityShown)),
         ]
 
         // ===== 详细分析 =====
@@ -794,7 +813,7 @@ final class SessionAudioAnalyzer {
             let flow = (pitchStability + timbreStability) / 2          // 旋律流畅度
             let shading = dynContrast                                   // 力度层次
             let phrasing = (postureStability + noteCleanliness) / 2    // 乐句连贯
-            let score = clamp(flow * 0.4 + shading * 0.35 + phrasing * 0.25)
+            let score = encouragingScore(clamp(flow * 0.4 + shading * 0.35 + phrasing * 0.25))
             pieceDimension = CoachReport.DimensionScore(
                 title: L("乐曲表现力"), score: score, weight: 0, comment: gradeComment(score))
             pieceDetail = CoachReport.DimensionDetail(title: L("乐曲维度：") + piece.displayName, metrics: [
@@ -806,7 +825,7 @@ final class SessionAudioAnalyzer {
             let drive = consistency                                     // 节奏驱动力
             let contrast = dramaticContrast                             // 戏剧性对比
             let power = clamp(noteCleanliness * 0.5 + energyScore * 0.5) // 扫拂气势与清晰度
-            let score = clamp(drive * 0.4 + contrast * 0.35 + power * 0.25)
+            let score = encouragingScore(clamp(drive * 0.4 + contrast * 0.35 + power * 0.25))
             pieceDimension = CoachReport.DimensionScore(
                 title: L("乐曲张力与气势"), score: score, weight: 0, comment: gradeComment(score))
             pieceDetail = CoachReport.DimensionDetail(title: L("乐曲维度：") + piece.displayName, metrics: [
@@ -818,7 +837,7 @@ final class SessionAudioAnalyzer {
             let phraseCoherence = (postureStability + noteCleanliness) / 2    // 乐句连贯
             let dynShading = dynContrast                                      // 力度层次
             let emotionalLayer = clamp(dramaticContrast * 0.5 + phraseCoherence * 0.5) // 情感层次
-            let score = clamp(emotionalLayer * 0.4 + dynShading * 0.35 + phraseCoherence * 0.25)
+            let score = encouragingScore(clamp(emotionalLayer * 0.4 + dynShading * 0.35 + phraseCoherence * 0.25))
             pieceDimension = CoachReport.DimensionScore(
                 title: L("乐曲情感深度"), score: score, weight: 0, comment: gradeComment(score))
             pieceDetail = CoachReport.DimensionDetail(title: L("乐曲维度：") + piece.displayName, metrics: [
