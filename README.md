@@ -16,7 +16,7 @@ An intelligent Pipa practice companion iOS app built on on-device CoreML. The ca
 
 ## Technical Contributions of This Project
 
-The project makes technical innovations and engineering trade-offs in the following five directions.
+The project makes technical innovations and engineering trade-offs in the following six directions.
 
 ### Contribution 1 · Audio-Video Multimodal Fusion for Fingering Detection
 
@@ -40,15 +40,25 @@ A self-trained four-class model is built in: `PipaSoundClassifier.mlmodel`. Its 
 - **On-device inference**: runs on the iPhone Neural Engine via `MLModel.prediction`; a single inference takes under 80 ms
 - **Zero network dependency**: the whole inference is completed locally; no audio clip is ever uploaded
 - **Precision optimization at the engineering layer**: the model itself is untouched. The threshold is 0.35 with a 2-frame moving average, plus energy gating that classifies low-RMS frames as background, and the inference step is 8000 frames instead of 15600 so consecutive windows overlap
-- **Training data published**: the four-class recordings used to train this model are released at [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset) (CC BY 4.0), so the experiment is reproducible and the recording process is documented there
+- **Training data published**: the four-class recordings used to train this model are released as a standalone dataset asset — see Contribution 3 below
 
-### Contribution 3 · Real-Time Algorithms: 4096-Point FFT + Kalman Filtering
+### Contribution 3 · An Open Pipa Sound Dataset Published as a Reusable Data Asset
+
+The classifier above is only as good as the audio behind it, so that audio is published on its own rather than kept private. The training corpus behind `PipaSoundClassifier.mlmodel` lives in a separate repository, [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset), released under CC BY 4.0.
+
+- **What it holds**: 37 clips in total, roughly 627 MB, split into the four classes the gate needs — `pipa/` 5 clips of my own playing across different techniques, `other_instrument/` 20 clips of instruments I play myself plus three AI-generated guzheng pieces, `speech/` 6 clips of my own voice, `background/` 6 clips of everyday ambience
+- **Every clip is cleared for release**: each one is either self-recorded, contributed by family with permission, or AI-generated, so nothing third-party is republished
+- **A documented sampling pipeline**: every recording is mixed to mono, resampled to 16 kHz by linear interpolation, and sliced into 15,600-sample windows of about 0.975 s advancing at 50% overlap, then fed to the classifier as raw waveform — the same window the released model takes
+- **Provenance kept visible**: 13 clips carry a 640×480 video track alongside the audio, stored through Git LFS, so a listener can confirm what was actually played; training consumes only the audio
+- **Why it is a data asset rather than a footnote**: the negative classes are what make the gate useful, and negative audio is the hardest kind to collect. Publishing it means anyone can retrain the gate on the same footing instead of guessing at what "not a Pipa" should sound like
+
+### Contribution 4 · Real-Time Algorithms: 4096-Point FFT + Kalman Filtering
 
 - **FFT spectrum analysis**: `DSPFeatureExtractor.swift` uses `vDSP_fft_zrip` (Accelerate-accelerated) to perform a 4096-point FFT and computes RMS, harmonic ratio, spectral centroid, zero-crossing rate and other indicators, which serve as the input features for pitch detection and the classifier
 - **Kalman filter smoothing**: the 21 landmarks obtained by `HandPoseExtractor` jitter on every frame, and using them directly introduces noise; after Kalman-filter smoothing, the tiger-mouth angle and wrist height are computed, giving a stable output of the tiger-mouth opening in degrees
 - **Parallel processing**: the microphone 4096-frame buffer and camera frames are captured on two independent threads without blocking each other; CoreML inference runs on the `inferenceQueue` serial queue and does not contend with the audio main thread
 
-### Contribution 4 · Unified Audio Pipeline + Model Gating Architecture
+### Contribution 5 · Unified Audio Pipeline + Model Gating Architecture
 
 On iOS, several modules all want the microphone, but the AVAudioEngine tap can only be installed by one processor — concurrent access from multiple modules conflicts directly. PluckBuddy's solution:
 
@@ -70,7 +80,7 @@ On iOS, several modules all want the microphone, but the AVAudioEngine tap can o
 - A single AVAudioEngine and a single tap; all modules that need audio share one buffer callback
 - `PipaSoundGate` loads `PipaSoundClassifier.mlmodel` independently and **does not take over the AVAudioEngine tap** — it only takes over "downsampling + model inference", avoiding resource contention with the Fingering Coach's Engine
 
-### Contribution 5 · Fully Offline On-Device Five-Layer Architecture
+### Contribution 6 · Fully Offline On-Device Five-Layer Architecture
 
 See the next section, System Architecture, for the detailed diagram. Core innovations:
 
@@ -319,7 +329,7 @@ Source code of a personal project; discussion and learning welcome.
 
 ## 本项目的技术贡献
 
-项目在以下五个方向做了技术创新与工程取舍。
+项目在以下六个方向做了技术创新与工程取舍。
 
 ### 贡献 1 · 音视频多模态融合检测指法
 
@@ -343,15 +353,25 @@ Source code of a personal project; discussion and learning welcome.
 - **端侧推理**：`MLModel.prediction` 跑在 iPhone 神经引擎上，单次推理不到 80 ms
 - **零网络依赖**：整个推理在本地完成，不上传任何音频片段
 - **工程层精度优化**：不动模型本身，改用阈值 0.35 加 2 帧滑动平均，再加一道能量门控，低 RMS 的安静帧直接判 background，推理步长也从 15600 帧改成 8000 帧形成重叠窗口
-- **训练数据已公开**：训练该模型所用的四分类录音已发布在 [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset)(CC BY 4.0)，便于复现本实验，录音与预处理流程也一并记录在仓库里
+- **训练数据已公开**：训练该模型所用的四分类录音已作为独立的数据资产发布——见下面的贡献 3
 
-### 贡献 3 · 4096 点 FFT + 卡尔曼滤波的实时算法
+### 贡献 3 · 作为可复用数据资产公开的琵琶声音数据集
+
+上面那个分类器有多准，取决于它背后的音频。因此这批音频没有留在本地，而是单独发布：`PipaSoundClassifier.mlmodel` 的训练语料在独立仓库 [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset)，以 CC BY 4.0 发布。
+
+- **收录了什么**：共 37 段、约 627 MB，按判门需要的四个类别分开——`pipa/` 5 段我自己弹的琵琶（覆盖不同指法）、`other_instrument/` 20 段我自己会演奏的乐器加三段 AI 生成的古筝、`speech/` 6 段我自己的声音、`background/` 6 段日常环境噪音
+- **每一段都可公开**：要么是本人录制，要么是家人录制并已获授权，要么是 AI 生成，没有转引他人录音
+- **采样流程完整记录**：每段录音都混为单声道，线性插值降采样到 16 kHz，切成 15,600 个采样点、约 0.975 秒的窗口并以 50% 重叠推进，再把原始波形送进分类器——与已发布模型接受的窗口一致
+- **来源可见**：其中 13 段在音频之外还带 640x480 视频轨，通过 Git LFS 存放，让人能确认当时到底弹了什么；训练只用音频
+- **为什么算数据资产而不是脚注**：真正让判门有用的，是那些负样本；而负样本恰恰是最难收集的。把它公开，意味着别人可以在同样的起点上重训这道判门，而不必自己猜"非琵琶"该是什么声音
+
+### 贡献 4 · 4096 点 FFT + 卡尔曼滤波的实时算法
 
 - **FFT 频谱分析**：`DSPFeatureExtractor.swift` 用 `vDSP_fft_zrip`（Accelerate 加速）做 4096 点 FFT，计算 RMS、谐波比、频谱质心、过零率等指标，作为音高检测和分类器输入特征
 - **卡尔曼滤波平滑**：`HandPoseExtractor` 拿到的 21 个关键点每帧都有抖动，直接用会引入噪声；经卡尔曼滤波平滑后，再算虎口角度、手腕高度，能稳定输出虎口张开度数
 - **并行处理**：麦克风 4096 帧缓冲和摄像头帧在两条独立线程上采集，互不阻塞；CoreML 推理在 `inferenceQueue` 串行队列上跑，不抢音频主线程
 
-### 贡献 4 · 统一音频管线 + 模型门控架构
+### 贡献 5 · 统一音频管线 + 模型门控架构
 
 iOS 上多个模块都想用麦克风，但 AVAudioEngine 的 tap 只能被一个处理器装上——多模块并发会直接冲突。弹拨搭子的解法：
 
@@ -372,7 +392,7 @@ iOS 上多个模块都想用麦克风，但 AVAudioEngine 的 tap 只能被一�
 - 单一 AVAudioEngine、单一 tap，所有需要音频的模块共享一份缓冲回调
 - `PipaSoundGate` 独立加载 `PipaSoundClassifier.mlmodel`，**不接管 AVAudioEngine tap**——它只接管"降采样 + 模型推理"，避免和指法教练的 Engine 抢资源
 
-### 贡献 5 · 全离线端侧五层架构
+### 贡献 6 · 全离线端侧五层架构
 
 详细架构图见下一节《系统架构》。核心创新点：
 

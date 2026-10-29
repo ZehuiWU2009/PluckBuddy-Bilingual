@@ -22,11 +22,17 @@ class RhythmDetector {
     /// 允许的固有计时噪声（秒）。起音位置与真实发声点之间总有毫秒级偏差（拨弦瞬态形状、
     /// 缓冲区边界），评分前先从标准差里扣掉，避免把测量误差算成演奏不稳。
     private let timingNoiseFloor: Double = 0.006
+    /// 新尖峰判据比例。当前峰值需高于「上一次起音峰值 × 此值」才算一次新的击弦，
+    /// 否则视为同一根弦的余振（琵琶余音长，余振峰值远低于原峰值）。
+    /// 设 0.4：可保留弹挑中力度约为「弹」40% 的「挑」，同时滤掉平缓余振。
+    /// 若发现「挑」明显轻于「弹」导致 BPM 偏低，把这个值调更低（如 0.3）。
+    private let newPeakRatio: Float = 0.4
     
     // MARK: - State
     private var lastDetectionTime: Date?
     private var intervals: [Double] = [] // 记录最近的时间间隔
     private var prevRMS: Float = 0       // 上一帧 RMS，用于判定「能量是否正在上升」（起音 vs 衰减尾）
+    private var lastOnsetPeak: Float = 0 // 上一次起音的峰值（用于区分「新尖峰」与「旧音余振」）
     private let maxIntervalHistory = 10
     
     // 🔍 调试：音量监控
@@ -107,17 +113,22 @@ class RhythmDetector {
         //    单根音的延音尾会被当成多次弹拨，算出虚高的 BPM（如刚弹第一个音就显示 200）；
         //    若只在「低于阈值→高于阈值」的上升沿计数，快速连弹时音与音的衰减尾常重叠、
         //    信号一直高于阈值，状态卡住导致后续起音永远不触发、BPM 恒为 0。
-        //    这里改为：越过不应期「且」能量正在上升时才记一次起音——
+        //    这里改为：越过不应期「且」能量真正上升「且」形成新尖峰时才记一次起音——
         //      - 不应期（minIntervalMs）排除噪声与同一根音的毫秒级双触发；
-        //      - 能量上升判定（当前 RMS 未明显低于上一帧）把下降的衰减尾排除在外，
-        //        而下一下的起音是上升的、会被记上。
+        //      - 能量上升判定要求当前 RMS 严格高于上一帧，把下降的衰减尾排除在外；
+        //      - 新尖峰判据要求当前峰值明显高于「上一次起音峰值」的余振水平，
+        //        滤掉同一根弦长余音的平缓起伏（这是弹琵琶测 BPM 虚高 40~50 的根因：
+        //        原判定允许能量下降 10% 仍算上升，余振在不应期过后被误判为第二次起音）。
         //    这样连续快速弹挑每一下都能独立计数，BPM 反映真实速度，也不再卡在 0。
         let sinceLast = lastDetectionTime.map { eventTime.timeIntervalSince($0) } ?? .infinity
         let minIntervalSec = minIntervalMs / 1000.0
-        let isRising = rms >= prevRMS * 0.9
+        // 真正的上升沿：当前帧能量必须高于上一帧（去掉原先「允许下降 10%」的宽松判定）
+        let isRising = rms > prevRMS
+        // 新尖峰：当前峰值明显高于上一次起音峰值的余振水平（首音或差距极大时直接放行）
+        let isNewPeak = lastOnsetPeak < 1e-4 || peak > lastOnsetPeak * newPeakRatio
 
-        // 仍在不应期内，或处于衰减尾（能量下降）→ 不是起音，不触发事件
-        guard sinceLast >= minIntervalSec, isRising else {
+        // 仍在不应期内、处于衰减尾（能量下降）、或只是旧音余振的起伏 → 不是起音
+        guard sinceLast >= minIntervalSec, isRising, isNewPeak else {
             prevRMS = rms
             return nil
         }
@@ -138,6 +149,7 @@ class RhythmDetector {
 
         lastDetectionTime = eventTime
         prevRMS = rms
+        lastOnsetPeak = peak
         detectionCount += 1
 
         // 6️⃣ 创建事件
@@ -227,6 +239,7 @@ class RhythmDetector {
         lastDetectionTime = nil
         intervals.removeAll()
         prevRMS = 0
+        lastOnsetPeak = 0
     }
 }
 

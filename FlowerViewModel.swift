@@ -31,11 +31,12 @@ class FlowerViewModel: ObservableObject {
     @Published var petalCount: Int = 0 // 当前花瓣数
     @Published var flowerBrightness: Double = 0.5 // 花朵亮度（基于速度）
     @Published var flowerSymmetry: Double = 1.0 // 花朵对称性（基于均匀度）
+    @Published var flowerVibrancy: Double = 0.45 // 花朵鲜艳度：弹得越优秀（又快又稳、评级高、连续优秀）颜色越鲜艳（0-1）
     @Published var isRolling: Bool = false // 是否正在轮指（控制动画）
     @Published var lastSequenceQuality: RollSequence.Quality? // 最近完成序列的质量
     @Published var pulseCounter: Int = 0 // ✨ 新增：花瓣脉冲计数器
     @Published var isStageResting: Bool = false // 是否正处于「长出一圈→停顿一下」的台阶停顿（供视图做呼吸动画）
-    @Published var bloomFlashCounter: Int = 0 // 优秀序列触发的金色光晕计数（每 +1 闪一次）
+    @Published var bloomFlashCounter: Int = 0 // 优秀序列触发的彩色光晕计数（每 +1 闪一次，颜色随表现更鲜艳）
     @Published var excellentStreak: Int = 0 // 连续「优秀」的序列数（中断即清零）
     @Published var flowerLayers: Int = 1 // 花层数：连续优秀累积成重瓣，1~3 层
     @Published var petalCloseCount: Int = 0 // 满花后已收拢的花瓣数（依次收拢用，0 表示未开始）
@@ -48,7 +49,7 @@ class FlowerViewModel: ObservableObject {
         currentSpeed * 60.0 / notesPerBeat
     }
 
-    /// 速度是否达到目标 BPM —— 达标即给出明确的视觉奖励（花色转金）
+    /// 速度是否达到目标 BPM —— 达标即给出明确的视觉奖励（花心泛起与表现同色的光晕）
     var isSpeedTargetMet: Bool {
         currentSpeed > 0 && currentSpeedBPM >= targetBPM
     }
@@ -260,6 +261,9 @@ class FlowerViewModel: ObservableObject {
         // 更新花朵生长
         updateFlowerGrowth()
         
+        // 实时刷新鲜艳度（速度变化时花色即时变化）
+        updateFlowerVibrancy()
+        
         // 更新提示信息
         updateStatusMessage()
     }
@@ -309,7 +313,7 @@ class FlowerViewModel: ObservableObject {
         case .excellent:
             bonusScore = Int(Double(bonusScore) * 2.0) // 2x
             print("   🌟 优秀！奖励: \(bonusScore)分")
-            bloomFlashCounter += 1 // 金色光晕：弹得好的即时正反馈
+            bloomFlashCounter += 1 // 彩色光晕：弹得好的即时正反馈（颜色随表现更鲜艳）
         case .good:
             bonusScore = Int(Double(bonusScore) * 1.5) // 1.5x
             print("   👍 良好！奖励: \(bonusScore)分")
@@ -323,8 +327,9 @@ class FlowerViewModel: ObservableObject {
         
         score += bonusScore
         
-        // 更新花朵属性（亮度随速度、对称随均匀度）
+        // 更新花朵属性（亮度随速度、对称随均匀度）与鲜艳度（随质量评级）
         updateFlowerAttributes()
+        updateFlowerVibrancy()
     }
     
     // MARK: - Flower Animation
@@ -407,6 +412,28 @@ class FlowerViewModel: ObservableObject {
         
         // 对称性基于均匀度
         flowerSymmetry = uniformity
+    }
+    
+    /// 花朵鲜艳度（0-1）：综合速度、均匀度与最近序列质量。
+    /// 弹得越优秀（又快又稳、评级高、连续优秀），鲜艳度越高，花色越饱满鲜亮；
+    /// 表现平平则花色发灰发淡，一眼能看出手感好坏。
+    private func updateFlowerVibrancy() {
+        let speedFactor = min(1.0, currentSpeed / 15.0)   // 0..1
+        let uniformFactor = uniformity                      // 0..1
+        var v = 0.25 + 0.30 * speedFactor + 0.25 * uniformFactor
+        if let q = lastSequenceQuality {
+            let tier: Double = {
+                switch q {
+                case .excellent:        return 0.30
+                case .good:             return 0.15
+                case .fair:             return 0.0
+                case .needsImprovement: return -0.10
+                }
+            }()
+            v += tier
+        }
+        v += min(0.20, Double(excellentStreak) * 0.04) // 连续优秀再叠加，把「持续弹得好」累积成更艳
+        flowerVibrancy = min(1.0, max(0.15, v))
     }
     
     /// 一朵花长满后的绽放 + 延迟归零，形成「生长→绽放→归零→重长」的持续循环。
@@ -561,6 +588,7 @@ class FlowerViewModel: ObservableObject {
         petalCount = 0
         flowerBrightness = 0.5
         flowerSymmetry = 1.0
+        flowerVibrancy = 0.45
         flowerNotes = 0
         flowerBlooming = false
         stageRestTask?.cancel()

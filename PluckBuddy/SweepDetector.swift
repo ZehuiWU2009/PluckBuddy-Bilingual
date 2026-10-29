@@ -97,12 +97,16 @@ class SweepDetector {
         //     旧实现拿「本次峰值 vs 上次峰值」比较，与方向毫无物理关系，是判不准的根因。
         let trend = centroidTrend(in: channelData, count: frameLength)
         let direction: SweepDirection
-        if let trend = trend, abs(trend) > trendThreshold {
-            direction = trend > 0 ? .down : .up
+        let directionReliable: Bool
+        if let t = trend, abs(t) > trendThreshold {
+            direction = t > 0 ? .down : .up
+            directionReliable = true
         } else {
             // 走向不明显时按「扫拂交替」推断。扫弦练习基本都是一扫一拂，
             // 这是很强的先验；旧实现被无意义的峰值比较分支抢占，才几乎全判成向下。
+            // 但这种方向不可信，标记出来，计算平衡分时不计入。
             direction = inferDirection()
+            directionReliable = false
         }
         lastDirection = direction
 
@@ -121,7 +125,8 @@ class SweepDetector {
             amplitude: peak,
             rms: rms,
             direction: direction,
-            strength: strength
+            strength: strength,
+            directionReliable: directionReliable
         )
         
         // 记录历史
@@ -224,12 +229,40 @@ class SweepDetector {
         let upCount = sweepHistory.filter { $0.direction == .up }.count
         let downCount = sweepHistory.filter { $0.direction == .down }.count
         let avgStrength = getAverageStrength()
-        
+
+        // 方向平衡：只有音频「音高走向」能可靠判定方向时，交替才有意义。
+        // 判不出走向时 inferDirection 会强制交替，若把这种不可信方向也算进去，
+        // 序列就一直「看起来完美交替」→ 平衡永远 100%。所以平衡只统计可信判定，
+        // 再乘「可信率」：判不出的越多，平衡分越低，彻底杜绝虚高。
+        var directionBalance: Double
+        let reliable = sweepHistory.filter { $0.directionReliable }
+        let rc = reliable.count
+        if sweepHistory.count < 2 {
+            directionBalance = 0.5
+        } else if rc < 2 {
+            // 方向大多判不出，不给高分（最多 0.5，且随可判定比例进一步压低）
+            directionBalance = 0.5 * Double(rc) / Double(sweepHistory.count)
+        } else {
+            let rUp = reliable.filter { $0.direction == .up }.count
+            let rDown = rc - rUp
+            let countBalance = 2.0 * Double(min(rUp, rDown)) / Double(rc)
+            var transitions = 0
+            for i in 1..<rc {
+                if reliable[i].direction != reliable[i - 1].direction {
+                    transitions += 1
+                }
+            }
+            let alternation = Double(transitions) / Double(rc - 1)
+            let reliability = Double(rc) / Double(sweepHistory.count)
+            directionBalance = min(1.0, reliability * countBalance * alternation)
+        }
+
         return SweepStatistics(
             totalCount: sweepHistory.count,
             upCount: upCount,
             downCount: downCount,
-            averageStrength: avgStrength
+            averageStrength: avgStrength,
+            directionBalance: directionBalance
         )
     }
     
@@ -242,11 +275,11 @@ class SweepDetector {
 }
 
 // MARK: - 力度归一化
-/// 麦克风前正常扫弦的峰值大多落在 0.15~0.6。过去直接拿振幅当百分比，
-/// 读数常年停在 30% 上下、与手感严重不符。这里把这段常见区间线性映射到 0~100%，
-/// 想要更「容易拿高分」就调低 strengthCeilAmplitude，反之调高。
+/// 麦克风前正常扫弦的峰值大多落在 0.15~0.40（实测「使劲弹」峰值约 0.40）。
+/// 过去上限取了 0.60，导致再用力也过不了 70%；先后调到 0.45、0.40，
+/// 每次把曲线整体抬高约 10 个百分点。想要更难拿高分就把 strengthCeilAmplitude 调高。
 private let strengthFloorAmplitude: Double = 0.10
-private let strengthCeilAmplitude: Double = 0.60
+private let strengthCeilAmplitude: Double = 0.40
 
 /// 把峰值振幅映射成 0~1 的力度
 func normalizedSweepStrength(amplitude: Float) -> Double {
@@ -312,6 +345,9 @@ struct SweepEvent {
     let rms: Float
     let direction: SweepDirection
     let strength: StrengthLevel
+    /// 方向是否由音频「音高走向」可靠判定；false 表示退回了「强制交替」兜底，
+    /// 该次方向不可信，计算方向平衡时应排除。
+    let directionReliable: Bool
     
     /// 归一化的力度值 (0-1)
     var normalizedStrength: Double {
@@ -326,13 +362,7 @@ struct SweepStatistics {
     let upCount: Int
     let downCount: Int
     let averageStrength: Double
-    
-    /// 方向平衡度（0-1，越接近 1 越平衡）
-    /// 旧公式是 min(up,down)/total，上下完全交替时也只有 0.5，
-    /// 于是「平衡得再好也只显示 50%」。改为 2×min/total，完全交替 = 100%。
-    var directionBalance: Double {
-        guard totalCount > 0 else { return 0.5 }
-        let raw = 2.0 * Double(min(upCount, downCount)) / Double(totalCount)
-        return min(1.0, raw)
-    }
+    /// 方向平衡度（0-1）：只在音频能可靠判定方向时才计分，判不出的次数越多平衡分越低，
+    /// 避免「强制交替」兜底把平衡永远顶到 100%。算法见 SweepDetector.getStatistics。
+    let directionBalance: Double
 }

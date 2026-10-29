@@ -83,6 +83,7 @@ struct FlowerPracticeView: View {
                             bloomFlash: viewModel.bloomFlashCounter,
                             layers: viewModel.flowerLayers,
                             isSpeedTargetMet: viewModel.isSpeedTargetMet,
+                            vibrancy: viewModel.flowerVibrancy,
                             petalCloseCount: viewModel.petalCloseCount
                         )
                         .frame(width: 220, height: 220)  // ✨ 缩小from 250
@@ -256,9 +257,10 @@ struct FlowerView: View {
     let isRolling: Bool // 是否正在轮指
     let pulseCounter: Int // ✨ 新增：脉冲计数器参数
     let isStageResting: Bool // 是否处于「长一圈→停顿」的台阶停顿
-    let bloomFlash: Int // 优秀序列触发的金色光晕计数
+    let bloomFlash: Int // 优秀序列触发的彩色光晕计数
     let layers: Int // 花层数（连续优秀累积的重瓣，1~3）
-    let isSpeedTargetMet: Bool // 速度是否达到目标 BPM（达标花色转金）
+    let isSpeedTargetMet: Bool // 速度是否达到目标 BPM（达标花心泛起与表现同色的光晕）
+    let vibrancy: Double // 花朵鲜艳度 0-1：越优秀花色越鲜艳
     let petalCloseCount: Int // 满花后已收拢的花瓣数（依次收拢用）
 
     @State private var rotationAngle: Double = 0
@@ -286,7 +288,8 @@ struct FlowerView: View {
                         Petal(
                             rotation: Double(index) * 45 + layerAngleOffset(layer),
                             scale: petalScale * layerScale(layer) * (isClosed ? 0.15 : 1.0),
-                            color: petalColor,
+                            colorTop: petalColorTop,
+                            colorBottom: petalColorBottom,
                             pulseCounter: pulseCounter, // ✨ 传递脉冲计数器
                             opacity: isClosed ? 0.0 : 1.0
                         )
@@ -301,7 +304,7 @@ struct FlowerView: View {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color.yellow, Color.orange],
+                        colors: [Color.white.opacity(0.92), petalColorTop, petalColorBottom],
                         center: .center,
                         startRadius: 0,
                         endRadius: 30
@@ -311,9 +314,9 @@ struct FlowerView: View {
                 .opacity(growth > 0 ? 1 : 0)
                 .scaleEffect(growth)
                 .scaleEffect(isRolling ? 1.1 : 1.0) // 轮指时轻微放大
-                // 速度达标：花心泛金光，作为「跟上了目标速度」的即时奖励
-                .shadow(color: isSpeedTargetMet ? Color.yellow.opacity(0.9) : .clear,
-                        radius: isSpeedTargetMet ? 16 : 0)
+                // 速度达标或表现优秀：花心泛起与表现同色的光晕，越鲜艳光晕越强，不再用金色
+                .shadow(color: petalColorTop.opacity(0.35 + 0.55 * vibrancy + (isSpeedTargetMet ? 0.1 : 0)),
+                        radius: 10 + 12 * vibrancy)
                 .animation(.spring(response: 0.5), value: growth)
                 .animation(.spring(response: 0.2, dampingFraction: 0.5), value: isRolling)
                 .animation(.easeInOut(duration: 0.3), value: isSpeedTargetMet)
@@ -327,11 +330,11 @@ struct FlowerView: View {
                 .opacity(restRingOpacity)
                 .allowsHitTesting(false)
 
-            // 优秀序列的金色光晕：从花心向外扩散一圈再淡出
+            // 优秀序列的彩色光晕：从花心向外扩散一圈再淡出，颜色随表现更鲜艳
             Circle()
                 .stroke(
                     AngularGradient(
-                        colors: [Color.yellow, Color.orange, Color.yellow],
+                        colors: [Color.pink, Color.purple, Color.cyan, Color.pink],
                         center: .center
                     ),
                     lineWidth: 4
@@ -371,7 +374,7 @@ struct FlowerView: View {
         .onChange(of: bloomFlash) { oldValue, newValue in
             guard newValue > oldValue else { return }
             flashScale = 0.7
-            flashOpacity = 0.9
+            flashOpacity = 0.55 + 0.4 * vibrancy
             withAnimation(.easeOut(duration: 0.7)) {
                 flashScale = 1.8
                 flashOpacity = 0.0
@@ -397,17 +400,22 @@ struct FlowerView: View {
         }
     }
 
-    private var petalColor: Color {
-        // 速度达到目标 BPM → 花色整体转金，是「达标了」最直观的奖励
-        if isSpeedTargetMet {
-            return Color(hue: 0.13, saturation: 0.9, brightness: 0.95)
-        }
-        // 色相随均匀度微微偏移，饱和度随「均匀度 × 亮度」：
-        // 弹得又稳又快 → 花色饱满鲜亮；弹得不稳 → 花色发灰发淡，一眼能看出手感好坏。
-        let hue = 0.88 + 0.06 * symmetry
-        let saturation = (0.45 + 0.45 * symmetry) * (0.7 + 0.3 * brightness)
-        let lightness = 0.45 + 0.25 * brightness
+    /// 花瓣渐变的上端颜色：鲜艳度越高，色相越往鲜艳的玫红/品红偏移、饱和度越高、亮度越足。
+    private var petalColorTop: Color {
+        // 色相：低鲜艳度偏冷淡蓝紫（~0.72），高鲜艳度偏鲜艳玫红/橙红（~0.95）；
+        // 均匀度做轻微微调，保留「弹得稳→色相偏移」的语义。
+        let hue = 0.72 + 0.23 * vibrancy + 0.04 * symmetry
+        // 饱和度：越优秀越鲜艳（0.35 发灰 → 1.0 极艳）
+        let saturation = 0.35 + 0.65 * vibrancy
+        let lightness = min(1.0, 0.55 + 0.2 * brightness + 0.12 * vibrancy)
+        return Color(hue: hue, saturation: saturation, brightness: lightness)
+    }
 
+    /// 花瓣渐变的下端颜色：与上端同一色系、略深略淡，形成柔和的渐变质感（不再是金色）。
+    private var petalColorBottom: Color {
+        let hue = 0.72 + 0.23 * vibrancy + 0.04 * symmetry + 0.02
+        let saturation = max(0.2, (0.35 + 0.65 * vibrancy) * 0.78)
+        let lightness = max(0.2, 0.40 + 0.18 * brightness + 0.1 * vibrancy)
         return Color(hue: hue, saturation: saturation, brightness: lightness)
     }
 }
@@ -416,7 +424,8 @@ struct FlowerView: View {
 struct Petal: View {
     let rotation: Double
     let scale: Double
-    let color: Color
+    let colorTop: Color
+    let colorBottom: Color
     let pulseCounter: Int // ✨ 改用计数器而非布尔值
     let opacity: Double // 收拢时淡出（满花后花瓣依次收拢用）
     
@@ -426,7 +435,7 @@ struct Petal: View {
         Ellipse()
             .fill(
                 LinearGradient(
-                    colors: [color, color.opacity(0.6)],
+                    colors: [colorTop, colorBottom],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -437,6 +446,7 @@ struct Petal: View {
             .rotationEffect(.degrees(rotation))
             .scaleEffect(scale)
             .opacity(opacity)
+            .animation(.easeInOut(duration: 0.35), value: colorTop) // 鲜艳度变化时花色平滑过渡
             .onChange(of: pulseCounter) { oldValue, newValue in
                 // ✨ 修复：每次计数器变化时触发新的脉冲
                 guard newValue > oldValue else { return }
