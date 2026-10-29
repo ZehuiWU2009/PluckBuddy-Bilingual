@@ -305,6 +305,13 @@ v1.0 through v1.3 were built as the Chinese edition between late September and e
   - Pluck / tremolo rhythm scoring had a unit mismatch: a fingertip displacement value was compared against a frequency (Hz) range, so it always fell into the "too slow" branch; the scoring now maps displacement magnitude to motion intensity correctly
   - On-device logging of the real tiger-mouth angle and wrist-speed distributions was added, to calibrate the remaining hand-shape thresholds with first-hand measurements before changing them
 
+### v2.7 · Sweep direction fix, gradient bloom and live roll metrics (2026-10-29)
+
+- Sweep direction detection rewritten to estimate the onset pitch by autocorrelation instead of the old FFT spectral-centroid trend. The previous FFT path was producing a corrupted spectrum, so direction was effectively random; the onset detector reads the fundamental of the first struck string (缠弦 ≈ 220 Hz against 子弦 ≈ 440 Hz) and separates down-sweep from up-sweep cleanly, for both sequential sweeps and same-fret four-note sweeps
+- Sweep direction-balance metric corrected so it neither saturates at 100% nor collapses toward zero; it now reflects the true alternation quality of the whole session
+- Tremolo Bloom (轮指花开) recolored from a fixed gold-at-target to a vibrancy gradient: the better the run, the more vivid the petals, while sustained excellent runs still accumulate extra layers (重瓣)
+- Roll (轮指) uniformity now refreshes live every 5 seconds while practicing, instead of only when the session stops, so learners can watch evenness improve in real time
+
 ## Known Limitations / To Be Improved
 
 - Classifier precision is still limited by the training data distribution. If the real-device console shows `rms > 0.05` but `pipa < 0.3`, the model's discriminative power is insufficient for the current microphone sound quality, and it needs to be retrained with the Create ML Sound Analysis template (≥ 30 clips of 16 kHz audio per class; a clearly better model can usually be produced within 30 minutes)
@@ -616,6 +623,13 @@ v1.0 到 v1.3 是 2026 年 9 月底到 10 月初以中文版形态走完的四�
   - 音色稳定性的过零率序列现在排除静音帧，消除有声段与静音段过零率差异巨大造成的爆表
   - 弹挑 / 轮指的节奏评分存在单位错配：指尖位移量被当成频率(Hz)区间去比对，恒判"太慢"；现改按位移量级映射运动强度
   - 新增真机日志，打印真实虎口角角度与手腕速度分布，待拿到一手数据后再标定剩余的手型阈值
+
+### v2.7 · 扫弦方向修正、渐变花开与轮指实时指标(2026-10-29)
+
+- 扫弦方向检测重写，改用自相关估起音基频，取代原先的 FFT 频谱质心走向。旧 FFT 路径算出的频谱其实是错的，方向判定基本等于随机；新判法读取最先拨动那根弦的基频(缠弦约 220 Hz 对子弦约 440 Hz)，无论顺序扫还是同品四音扫，都能干净区分下扫与上拂
+- 扫弦方向平衡指标修正，既不会恒为 100%，也不会掉到接近零；现在如实反映整场练习的交替质量
+- 轮指花开(轮指花开)由"达标转金色"改为"鲜艳度渐变"：练得越好花瓣越鲜艳，连续优秀的轮指仍会累积成重瓣
+- 轮指均匀度改为练习中每 5 秒实时刷新，不再只在停下时才出，练习者能实时看到均匀度变化
 
 ## 已知限制 / 待改进
 

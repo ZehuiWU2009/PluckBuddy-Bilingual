@@ -80,6 +80,7 @@ class FlowerViewModel: ObservableObject {
     private var startTime: Date?
     private var durationTimer: Timer? // 用于更新实时时长
     private var idleWorkItem: DispatchWorkItem? // 用于检测空闲（无轮指）
+    private var uniformityTimer: Timer? // 用于每 5 秒刷新均匀度（演奏中实时反馈）
     private var completedSequences: [RollSequence] = []
     
     // MARK: - Constants
@@ -164,6 +165,9 @@ class FlowerViewModel: ObservableObject {
                 // 启动时长计时器
                 startDurationTimer()
                 
+                // 启动均匀度定时刷新（每 5 秒，让百分比在演奏中实时变化）
+                startUniformityTimer()
+                
             } catch {
                 print("❌ 音频启动失败: \(error.localizedDescription)")
                 statusMessage = "音频启动失败"
@@ -184,6 +188,9 @@ class FlowerViewModel: ObservableObject {
         
         // 停止时长计时器
         stopDurationTimer()
+        
+        // 停止均匀度定时刷新
+        stopUniformityTimer()
         
         // 取消空闲任务
         idleWorkItem?.cancel()
@@ -597,6 +604,8 @@ class FlowerViewModel: ObservableObject {
         closingTask = nil
         isStageResting = false
         isClosing = false
+        uniformityTimer?.invalidate()
+        uniformityTimer = nil
         petalCloseCount = 0
         bloomFlashCounter = 0
         excellentStreak = 0
@@ -658,6 +667,34 @@ class FlowerViewModel: ObservableObject {
     private func stopDurationTimer() {
         durationTimer?.invalidate()
         durationTimer = nil
+    }
+    
+    // MARK: - 均匀度定时刷新
+    /// 每 5 秒用「当前进行中的序列」刷新一次均匀度，使轮指均匀度百分比在演奏中
+    /// 就能实时变化，而不必等到序列结束/停下（旧实现只在序列完成时刷新一次，
+    /// 看起来非停下不出数、且停下后就不变）。采样窗口只取最近约 15 个音符的间隔，
+    /// 因此会随你这一段弹得稳不稳而上下浮动。
+    private func startUniformityTimer() {
+        stopUniformityTimer()
+        uniformityTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refreshLiveUniformity()
+            }
+        }
+    }
+    
+    private func refreshLiveUniformity() {
+        // 仅在正在演奏且仍在轮指时刷新；停下（isRolling 变 false）后保持最后一次数值
+        guard isRunning, isRolling else { return }
+        guard let live = rollDetector?.liveUniformity() else { return }
+        uniformity = live
+        updateFlowerAttributes()   // 同步花朵对称度
+        updateFlowerVibrancy()     // 同步花色鲜艳度
+    }
+    
+    private func stopUniformityTimer() {
+        uniformityTimer?.invalidate()
+        uniformityTimer = nil
     }
     
     // MARK: - Settings

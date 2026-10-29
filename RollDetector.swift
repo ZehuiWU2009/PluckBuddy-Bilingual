@@ -250,6 +250,19 @@ class RollDetector {
         return RollUniformityScorer.score(intervals: intervals)
     }
     
+    /// 当前进行中序列的实时均匀度（0-1）。
+    /// 只取最近 `window` 个音符的间隔来估计，反映「这一段弹得稳不稳」，
+    /// 而不是整段练习的累计均值——这样花开页的均匀度百分比能在演奏中实时变化，
+    /// 不必等到序列结束/停下才出数。音符不足 3 个（间隔不足 2 个）时返回 nil，
+    /// 表示还无法估计均匀度。
+    func liveUniformity(window: Int = 15) -> Double? {
+        let seq = currentSequence.suffix(window)
+        guard seq.count >= 3 else { return nil }
+        let intervals = seq.dropFirst().map { $0.interval }
+        guard !intervals.isEmpty else { return nil }
+        return RollUniformityScorer.score(intervals: intervals)
+    }
+    
     /// 重置检测器
     func reset() {
         noiseFloor = 0.01

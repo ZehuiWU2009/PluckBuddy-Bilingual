@@ -22,17 +22,18 @@ class SweepDetector {
     private var sweepHistory: [SweepEvent] = []
     private var lastDirection: SweepDirection? // 上一次判定的方向（走向不明显时按它交替推断）
 
-    // MARK: - 音高走向分析（用于判方向）
-    private let fftSize = 1024 // 约 21ms @48k，足够分辨相邻弦发声的先后顺序
-    private let fftSetup: vDSP_DFT_Setup
-    private var realBuffer: [Float]
-    private var imagBuffer: [Float]
-    private var magnitudes: [Float]
-    /// 判定方向所需的相对走向阈值：质心前后半相对变化超过这个值才采信。
-    /// 四根弦的延音互相重叠，走向信号的量级本来就小（合成测试约 0.01~0.07），
-    /// 阈值定高了就会频繁失效、退回兜底，所以这里取得较敏感。
-    /// 若真机日志显示方向乱跳，把这个值调大（0.05~0.08）。
-    private let trendThreshold: Float = 0.02
+    // MARK: - 方向检测（基于起音基频的自相关）
+    /// 扫弦起音最初几毫秒只有最先被拨到的那根弦单独发声：
+    /// 下扫（扫）先碰缠弦（≈220Hz），上拂（拂）先碰子弦（≈440Hz）。
+    /// 用自相关估出起音基频，低于 330Hz 判向下、高于判向上，干净区分两种方向，
+    /// 不受四弦延音重叠与击弦亮度干扰。
+    /// 旧实现用全程频谱质心趋势判方向，但四弦在 ~88ms 内全拨完、到窗口中点已一起响，
+    /// 前后半窗质心几乎相同，走向信号被淹没，几乎永远判不出方向，导致平衡虚高/虚低。
+    private let onsetBlockSize = 1024          // 约 21ms @48k，只含引导弦
+    private let onsetMinFreqHz: Double = 160  // 自相关搜索下限
+    private let onsetMaxFreqHz: Double = 600  // 自相关搜索上限（含缠/子八度差余量）
+    private let onsetConfidenceMin: Float = 0.12 // 低于此置信度视为无法判定，回退交替推断
+    private let onsetSplitHz: Double = 330    // 缠弦(220)与子弦(440)的中点，用于二分方向
 
     // MARK: - Callbacks
     var onSweepDetected: ((SweepEvent) -> Void)?
@@ -40,21 +41,9 @@ class SweepDetector {
     // MARK: - Initialization
     init(sampleRate: Double = 48000.0) {
         self.sampleRate = sampleRate
-        guard let setup = vDSP_DFT_zrop_CreateSetup(
-            nil,
-            vDSP_Length(fftSize),
-            vDSP_DFT_Direction.FORWARD
-        ) else {
-            fatalError("Failed to create FFT setup")
-        }
-        self.fftSetup = setup
-        self.realBuffer = [Float](repeating: 0, count: fftSize)
-        self.imagBuffer = [Float](repeating: 0, count: fftSize)
-        self.magnitudes = [Float](repeating: 0, count: fftSize / 2)
     }
 
     deinit {
-        vDSP_DFT_DestroySetup(fftSetup)
     }
     
     // MARK: - Detection
@@ -91,29 +80,26 @@ class SweepDetector {
         
         lastDetectionTime = now
         
-        // 5️⃣ 检测方向：扫弦是四根弦依次发声的琶音，方向体现在「音高的走向」上：
-        //     向下扫（扫）由缠弦划向子弦，音高由低到高 → 频谱质心上升；
-        //     向上扫（拂）由子弦划向缠弦，音高由高到低 → 频谱质心下降。
-        //     旧实现拿「本次峰值 vs 上次峰值」比较，与方向毫无物理关系，是判不准的根因。
-        let trend = centroidTrend(in: channelData, count: frameLength)
+        // 5️⃣ 检测方向：用「起音基频」判定。
+        //     下扫（扫）拨片先碰缠弦，起音基频≈220Hz；上拂（拂）先碰子弦，起音基频≈440Hz。
+        //     取检测窗首块做自相关估基频，低于 330Hz 判向下、高于判向上，干净区分两种方向。
+        let onset = onsetPitch(in: channelData, count: frameLength)
         let direction: SweepDirection
         let directionReliable: Bool
-        if let t = trend, abs(t) > trendThreshold {
-            direction = t > 0 ? .down : .up
+        if let (f, c) = onset, c >= onsetConfidenceMin {
+            direction = f < onsetSplitHz ? .down : .up
             directionReliable = true
         } else {
-            // 走向不明显时按「扫拂交替」推断。扫弦练习基本都是一扫一拂，
-            // 这是很强的先验；旧实现被无意义的峰值比较分支抢占，才几乎全判成向下。
-            // 但这种方向不可信，标记出来，计算平衡分时不计入。
+            // 起音基频判不出时按「扫拂交替」推断（扫弦练习基本一扫一拂，是很强的先验）。
             direction = inferDirection()
             directionReliable = false
         }
         lastDirection = direction
 
-        if let trend = trend {
-            print("   🧭 音高走向: \(String(format: "%+.3f", trend)) → \(direction == .down ? "向下扫（音高由低到高）" : "向上拂（音高由高到低）")")
+        if let (f, c) = onset {
+            print("   🧭 起音基频: \(String(format: "%.0f", f))Hz 置信\(String(format: "%.2f", c)) → \(direction == .down ? "向下扫（缠弦先响）" : "向上拂（子弦先响）")")
         } else {
-            print("   🧭 音高走向: 信号太弱无法判定，沿用上次方向")
+            print("   🧭 起音基频无法判定，沿用交替推断")
         }
 
         // 6️⃣ 计算力度等级（基于归一化后的峰值力度）
@@ -141,55 +127,36 @@ class SweepDetector {
     
     // MARK: - Analysis
 
-    /// 计算一段样本的频谱质心（Hz）。质心越高说明高频能量占比越大、音高越高。
-    private func spectralCentroid(of data: UnsafePointer<Float>) -> Float {
-        var window = [Float](repeating: 0, count: fftSize)
-        vDSP_hamm_window(&window, vDSP_Length(fftSize), 0)
+    /// 估起音基频：对检测窗首块做自相关，在 [onsetMinFreqHz, onsetMaxFreqHz] 对应 lag 区间取峰值。
+    /// 返回 (基频Hz, 置信度)。置信度 = 峰值自相关 / 零延迟能量，越高说明起音周期性越强、判定越可信。
+    /// 不依赖 FFT（App 内 vDSP_DFT 用法算出的频谱有偏差），纯时域计算，稳定可靠。
+    private func onsetPitch(in data: UnsafePointer<Float>, count: Int) -> (freq: Double, confidence: Float)? {
+        let block = min(onsetBlockSize, count)
+        guard block > 64 else { return nil }
 
-        var windowed = [Float](repeating: 0, count: fftSize)
-        vDSP_vmul(data, 1, window, 1, &windowed, 1, vDSP_Length(fftSize))
+        var x = [Float](repeating: 0, count: block)
+        for i in 0..<block { x[i] = data[i] }
 
-        // 输入与输出必须用不同的数组：同一个数组既作 in 又作 out 会触发 Swift 的
-        // 独占访问检查（Debug 下运行时崩溃、Release 下直接编译不过）。
-        var inputReal = windowed
-        var inputImag = [Float](repeating: 0, count: fftSize)
-        vDSP_DFT_Execute(fftSetup, &inputReal, &inputImag, &realBuffer, &imagBuffer)
+        var energy: Float = 0
+        for i in 0..<block { energy += x[i] * x[i] }
+        guard energy > 1e-4 else { return nil }
 
-        let half = fftSize / 2
-        let resolution = Float(sampleRate) / Float(fftSize)
-        var weighted: Float = 0
-        var total: Float = 0
-        for i in 0..<half {
-            let real = realBuffer[i]
-            let imag = imagBuffer[i]
-            let mag = sqrt(real * real + imag * imag)
-            magnitudes[i] = mag
-            weighted += Float(i) * resolution * mag
-            total += mag
+        let minLag = max(1, Int(Double(sampleRate) / onsetMaxFreqHz))
+        let maxLag = min(block - 1, Int(Double(sampleRate) / onsetMinFreqHz))
+        guard maxLag > minLag else { return nil }
+
+        var bestLag = minLag
+        var bestACF: Float = -1
+        for lag in minLag...maxLag {
+            var sum: Float = 0
+            for i in 0..<(block - lag) { sum += x[i] * x[i + lag] }
+            if sum > bestACF { bestACF = sum; bestLag = lag }
         }
-        return total > 0 ? weighted / total : 0
-    }
+        guard bestLag > 0, bestACF > 0 else { return nil }
 
-    /// 扫弦窗内的音高走向（相对值）：
-    /// >0 表示质心上升（音高由低到高，缠弦→子弦，即向下扫 / 扫）；
-    /// <0 表示质心下降（音高由高到低，子弦→缠弦，即向上扫 / 拂）。
-    /// 把窗切成若干子块逐块算质心，再比较前后半的均值差。
-    private func centroidTrend(in data: UnsafePointer<Float>, count: Int) -> Float? {
-        let blockCount = count / fftSize
-        let half = blockCount / 2
-        guard half >= 1 else { return nil }
-
-        var centroids: [Float] = []
-        centroids.reserveCapacity(blockCount)
-        for b in 0..<blockCount {
-            centroids.append(spectralCentroid(of: data + b * fftSize))
-        }
-
-        let first = centroids.prefix(half).reduce(0, +) / Float(half)
-        let second = centroids.suffix(half).reduce(0, +) / Float(half)
-        let mean = centroids.reduce(0, +) / Float(blockCount)
-        guard mean > 80 else { return nil } // 能量太低，走向不可信
-        return (second - first) / mean
+        let freq = Double(sampleRate) / Double(bestLag)
+        let confidence = bestACF / energy
+        return (freq, confidence)
     }
 
     /// 走向不明显时的兜底：按「一扫一拂」交替推断。
@@ -230,31 +197,24 @@ class SweepDetector {
         let downCount = sweepHistory.filter { $0.direction == .down }.count
         let avgStrength = getAverageStrength()
 
-        // 方向平衡：只有音频「音高走向」能可靠判定方向时，交替才有意义。
-        // 判不出走向时 inferDirection 会强制交替，若把这种不可信方向也算进去，
-        // 序列就一直「看起来完美交替」→ 平衡永远 100%。所以平衡只统计可信判定，
-        // 再乘「可信率」：判不出的越多，平衡分越低，彻底杜绝虚高。
+        // 方向平衡：统计整段真实方向序列的「数量均衡 × 交替质量」。
+        // 现在方向由起音基频可靠判定（见 detectSweep），不再用「强制交替」兜底去压低分数，
+        // 所以直接按全序列计算：数量越接近 1:1、交替越整齐，分数越高；
+        // 偏重一侧或连弹同向，分数自然下降。均衡且整齐时接近 1.0（这是真实练习的正常结果），
+        // 不再被不可信率乘子压到接近 0。
         var directionBalance: Double
-        let reliable = sweepHistory.filter { $0.directionReliable }
-        let rc = reliable.count
         if sweepHistory.count < 2 {
             directionBalance = 0.5
-        } else if rc < 2 {
-            // 方向大多判不出，不给高分（最多 0.5，且随可判定比例进一步压低）
-            directionBalance = 0.5 * Double(rc) / Double(sweepHistory.count)
         } else {
-            let rUp = reliable.filter { $0.direction == .up }.count
-            let rDown = rc - rUp
-            let countBalance = 2.0 * Double(min(rUp, rDown)) / Double(rc)
+            let countBalance = 2.0 * Double(min(upCount, downCount)) / Double(sweepHistory.count)
             var transitions = 0
-            for i in 1..<rc {
-                if reliable[i].direction != reliable[i - 1].direction {
+            for i in 1..<sweepHistory.count {
+                if sweepHistory[i].direction != sweepHistory[i - 1].direction {
                     transitions += 1
                 }
             }
-            let alternation = Double(transitions) / Double(rc - 1)
-            let reliability = Double(rc) / Double(sweepHistory.count)
-            directionBalance = min(1.0, reliability * countBalance * alternation)
+            let alternation = Double(transitions) / Double(sweepHistory.count - 1)
+            directionBalance = min(1.0, countBalance * alternation)
         }
 
         return SweepStatistics(
@@ -345,8 +305,8 @@ struct SweepEvent {
     let rms: Float
     let direction: SweepDirection
     let strength: StrengthLevel
-    /// 方向是否由音频「音高走向」可靠判定；false 表示退回了「强制交替」兜底，
-    /// 该次方向不可信，计算方向平衡时应排除。
+    /// 方向是否由「起音基频」可靠判定；false 表示起音基频判不出、退回了「交替推断」兜底。
+    /// 仅用于日志与调试，计算方向平衡时不再排除（见 getStatistics）。
     let directionReliable: Bool
     
     /// 归一化的力度值 (0-1)
@@ -362,7 +322,7 @@ struct SweepStatistics {
     let upCount: Int
     let downCount: Int
     let averageStrength: Double
-    /// 方向平衡度（0-1）：只在音频能可靠判定方向时才计分，判不出的次数越多平衡分越低，
-    /// 避免「强制交替」兜底把平衡永远顶到 100%。算法见 SweepDetector.getStatistics。
+    /// 方向平衡度（0-1）：统计整段真实方向序列的「数量均衡 × 交替质量」，
+    /// 方向由起音基频可靠判定（见 SweepDetector.detectSweep / getStatistics）。
     let directionBalance: Double
 }
