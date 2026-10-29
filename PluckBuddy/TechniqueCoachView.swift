@@ -18,6 +18,9 @@ struct TechniqueCoachView: View {
     @State private var displayTechnique: TechniqueType = .unknown
     /// 固定展示的评估结果：同样沿用上一次有效值，避免评分数字闪烁
     @State private var displayEvaluation: PostureEvaluation?
+    /// 本次会话是否“听到过琵琶声”的锁存：第一个音出现即置 true，之后不再因
+    /// 音符间隙门控短暂判非琵琶声而回落。true 之前四维评分固定保持全黑占位。
+    @State private var hasHeardPipa = false
     
     var body: some View {
         ZStack {
@@ -42,11 +45,25 @@ struct TechniqueCoachView: View {
             // 只在识别到明确技法时切换界面，未识别时保持当前显示
             guard newValue != .unknown, newValue != displayTechnique else { return }
             displayTechnique = newValue
-            displayEvaluation = nil
+            // 注意：不要在这里清空 displayEvaluation。音频门控在音符间隙会短暂判非琵琶声，
+            // 且技法常在弹挑/轮指间抖动，若在此清空，四维评分面板会瞬间全黑闪一下。
+            // 评分由下面的 onChange 与 hasHeardPipa 锁存自然管理，这里只管技法标签。
         }
-        .onChange(of: viewModel.currentEvaluation?.overallScore) { _, _ in
-            // 音频门控未通过时 currentEvaluation 为 nil，这里同步清空，避免残留上一次的分数
-            displayEvaluation = viewModel.currentEvaluation
+        .onChange(of: viewModel.currentEvaluation) { _, newEval in
+            // 听到第一个音（currentEvaluation 首次非 nil）即启动四维评分并锁存 hasHeardPipa；
+            // 此后音符间隙让门控短暂判非琵琶声（newEval 变 nil）时，沿用上一次评分不闪黑。
+            // hasHeardPipa 为 false 之前，四维面板固定保持全黑占位（“没听到琵琶声就全黑”）。
+            if let eval = newEval {
+                hasHeardPipa = true
+                displayEvaluation = eval
+            }
+        }
+        .onChange(of: viewModel.isAnalyzing) { _, analyzing in
+            // 会话结束（停止分析）时复位锁存，下次重新开始、听到第一个音之前保持全黑。
+            if !analyzing {
+                hasHeardPipa = false
+                displayEvaluation = nil
+            }
         }
         .sheet(item: $viewModel.report) { report in
             CoachReportView(report: report)
@@ -294,7 +311,9 @@ struct TechniqueCoachView: View {
     
     /// 获取通用的4个固定评估维度
     private func getStandardAspect(at index: Int) -> EvaluationAspect? {
-        guard let evaluation = displayEvaluation else {
+        // 没听到过琵琶声（hasHeardPipa 为 false）时保持全黑占位；
+        // 听到第一个音之后才出值，之后音符间隙沿用上一帧、不再全黑。
+        guard hasHeardPipa, let evaluation = displayEvaluation else {
             return nil
         }
         

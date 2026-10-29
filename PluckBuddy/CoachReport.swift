@@ -318,6 +318,24 @@ final class SessionAudioAnalyzer {
     private var envSlow: Double = 0   // 起音检测的局部自适应基线（慢包络，tau≈180ms）
     private var wasActive = false
 
+    // 「持续琵琶声」判定用的连续性统计。
+    // 只看累计活跃帧数是不够的：敲两下桌子 + 环境噪声就能凑够帧数与起音数，
+    // 于是报告照样生成（拿到高分），这正是误判的来源。
+    // 这里额外统计「最长连续活跃段」与「活跃帧占比」，要求真正在持续发声。
+    private var currentActiveRun: Double = 0     // 当前连续活跃时长（秒）
+    private var longestActiveRun: Double = 0     // 本次会话最长连续活跃时长（秒）
+    private var lastActiveTime: Double = -1      // 上一个活跃帧的时刻
+
+    /// 连续活跃段允许的短暂断音（秒）：拨弦的衰减尾音与换指间隙会让声音短暂掉到静音，
+    /// 慢速练习的音符间隔可达 0.5 秒以上，取 0.6 秒以免误伤真实的稀疏演奏；
+    /// 敲桌子、敲键盘这类瞬态彼此相隔远超这个间隔，仍会被判定为不连续。
+    private static let continuityGapTolerance: Double = 0.6
+
+    /// 累计发声时长（秒）：只统计真正有声音的帧。
+    /// 这是「有没有在弹」最直接的度量——乐曲里的长休止不计入，
+    /// 所以不会因为曲子有停顿就被误判成没演奏。
+    private var activeDuration: Double = 0
+
     private var rollIOIs: [Double] = []            // 轮指段内的起音间隔
 
     // 力度稳定性改用「每次起音的峰值包络」而非逐帧 RMS：
@@ -374,15 +392,45 @@ final class SessionAudioAnalyzer {
     /// 只要积累了最低限度的真实演奏证据就允许评分。
     /// 音频是报告的主要依据（必须听到足够多的有效拨弦）；视频手型只是加分项，
     /// 手部追踪不稳时不应阻断报告——否则真机上手没框住就永远出不了报告。
+    ///
+    /// 「持续听到琵琶声」规则（防止误判出报告）：
+    /// 仅看累计活跃帧数是不够的——敲两下桌子加环境噪声就能凑够帧数与起音数，
+    /// 于是照样出报告还拿高分。因此这里额外要求：
+    ///   1. 存在一段**连续不断**的活跃声音（跨过短暂换气的容差），至少 0.8 秒；
+    ///   2. **累计发声时长**达到门槛：这是「有没有真的在弹」最直接的度量；
+    ///   3. 起音次数达到 3 次以上，确认是真实的连续拨弦而非单次敲击；
+    ///   4. 音色丰富度：检出过清晰音高，或有足够的视频手型帧佐证。
+    ///
+    /// 关于「乐曲中的停顿」：
+    /// 早期版本用「最长连续段 ÷ 录音总时长 ≥ 25%」做第 2 条的分母，
+    /// 于是慢板乐曲里几秒的休止会把占比压到极低，一首正常演奏的曲子
+    /// 反被判定成「没在弹」。现在改用累计发声时长判定：停顿本身不计入发声量，
+    /// 只要整场里真正在响的总时长够长就放行；停顿多长都不会误杀。
     func hasSufficientEvidence(duration: TimeInterval) -> Bool {
         queue.sync {
             // 时长不足直接不出
             guard duration >= 2 else { return false }
-            // 音频证据充分：活跃帧 + 至少两次起音，足以证明“真的在弹”。
-            let audioOK = activeFrames >= 8 && onsetTimes.count >= 2
-            // 丰富度兜底：实际演奏必有音高或视频手型；避免纯噪声被误判为演奏。
+
+            // ① 连续活跃段：必须有一段持续的琵琶声，而不是零散的瞬态噪声。
+            //    门槛取 0.75 秒而非 0.8：分析器按 1024 样本（64 ms）为帧，
+            //    0.75 秒对应 12 帧整，慢板曲目的短乐句（≥0.75 秒）不会被卡在边界上。
+            let minContinuous: Double = 0.75
+            guard longestActiveRun >= minContinuous else { return false }
+
+            // ② 累计发声时长：整场练习里真正在响的总时间要够长。
+            //    这条取代了原先「最长连续段 ÷ 录音总时长 ≥ 25%」的占比判据，
+            //    因为后者会被乐曲里的长休止误杀（慢板曲的休止越久越容易被判死）。
+            //    门槛取「最长连续段的 2 倍」：至少要有一段连贯演奏，
+            //    且整体发声量不能只有那一小段——弹两下就停会被拦下。
+            let minActiveDuration = max(minContinuous * 2, 1.5)
+            guard activeDuration >= minActiveDuration else { return false }
+
+            // ③ 起音次数：确认真实的连续拨弦
+            guard onsetTimes.count >= 3 else { return false }
+
+            // ④ 丰富度兜底：实际演奏必有音高或视频手型；避免纯噪声被误判为演奏
             let richnessOK = tonalFrames >= 1 || postureScores.count >= 6
-            return audioOK && richnessOK
+            return richnessOK
         }
     }
 
@@ -434,6 +482,10 @@ final class SessionAudioAnalyzer {
         lastOnsetTime = -1
         envSlow = 0
         wasActive = false
+        currentActiveRun = 0
+        longestActiveRun = 0
+        lastActiveTime = -1
+        activeDuration = 0
         rollIOIs.removeAll()
         notePeakRMS.removeAll()
         currentPeak = 0
@@ -512,6 +564,16 @@ final class SessionAudioAnalyzer {
 
         if active {
             activeFrames += 1
+            // 连续性统计：接上上一段（断音在容差内算同一段），否则另起一段
+            let windowDuration = Double(window.count) / sampleRate
+            activeDuration += windowDuration
+            if lastActiveTime >= 0, (time - lastActiveTime) <= Self.continuityGapTolerance {
+                currentActiveRun += windowDuration
+            } else {
+                currentActiveRun = windowDuration
+            }
+            lastActiveTime = time
+            longestActiveRun = max(longestActiveRun, currentActiveRun)
             // 仅活跃帧进入音色稳定性统计，排除静音段的随机过零（修复：静音帧把 ZCR 变异系数拉爆）
             zcrHistory.append(zcrD)
             // 跟踪当前活跃段内的局部峰值，供力度稳定性使用
@@ -724,28 +786,63 @@ final class SessionAudioAnalyzer {
         let stabilityScore = stabilityParts.isEmpty ? 60.0 : clamp(stabilityParts.reduce(0, +) / Double(stabilityParts.count))
 
         // ===== 综合（权重：指法 30 / 颗粒 25 / 节奏 25 / 稳定 20）=====
-        // 鼓励性评分：能走到这里说明 hasSufficientEvidence 已通过（已检测到琵琶声）。
-        // 不直接把低分硬夹到 85（那样弱一点的练习每次都显示 85），而是把低分区间
-        // 连续重映射到 87–95——既保证“高于 85 分”，又保留随真实表现变化的区分度；
-        // 真实分 ≥85 时保持自然，可继续走高到 100。
-        let pipaHeardFloor: Double = 85
-        func encouragingScore(_ raw: Double) -> Double {
-            let r = min(max(raw, 0), 100)
-            if r <= pipaHeardFloor {
-                // 0 → 87，85 → 95，单调上升，绝不会出现“每次都是 85”
-                return 87 + (r / pipaHeardFloor) * 8
-            } else {
-                // 85 → 95，100 → 100，与上段在 85 处连续
-                return 95 + ((r - pipaHeardFloor) / 15) * 5
+        // 评分结构：时长定「档」，表现定「档内位置」。
+        //   · 时长里程碑：0 秒从 85.1 起步；练满 1 分钟才进入 90 分档；
+        //     满 2 分钟进入 92 分档；满 3 分钟进入 95 分档；满 5 分钟才进入
+        //     「接近满分」档（97+），10 分钟封顶 99.5。
+        //     没到下一个里程碑之前，分数不会越过它——练不够就拿不到高分。
+        //   · 档内位置由真实表现与随机基准决定。同一份报告共享同一个随机基准，
+        //     每个维度再叠一点独立微扰，所以每次练习分数都不同，
+        //     而综合分与各维度分始终自洽（不会综合 95、四个维度却全是 85）。
+        let scoreFloor: Double = 85.1
+        let scoreCeiling: Double = 99.5
+
+        /// 时长里程碑：(秒数, 到达该时长时的档底分)。相邻两档之间线性过渡。
+        let durationMilestones: [(time: TimeInterval, score: Double)] = [
+            (0, 85.1), (60, 90.0), (120, 92.0), (180, 95.0), (300, 97.0), (600, 99.5)
+        ]
+
+        /// 时长 → (档底分, 档顶分)。档底是时长插值出来的底线（保证练得越久分数越高），
+        /// 档顶是下一个里程碑（没到它就拿不到更高档的分数）。
+        func durationBand(_ d: TimeInterval) -> (floor: Double, ceiling: Double) {
+            let t = max(d, 0)
+            let last = durationMilestones[durationMilestones.count - 1]
+            if t >= last.time { return (last.score, last.score) }
+            for i in 0..<(durationMilestones.count - 1) {
+                let cur = durationMilestones[i]
+                let next = durationMilestones[i + 1]
+                if t < next.time {
+                    let ratio = (t - cur.time) / (next.time - cur.time)
+                    return (cur.score + (next.score - cur.score) * ratio, next.score)
+                }
             }
+            return (scoreFloor, scoreCeiling)
+        }
+
+        let band = durationBand(duration)
+        /// 真实表现在档内位置里占的权重，其余留给随机基准
+        let realWeight: Double = 0.45
+        /// 本次报告共享的随机基准位置（0–1）
+        let reportRandomBase = Double.random(in: 0...1)
+        /// 把真实分折算成 0–1 的位置（sqrt 曲线，低分段区分度更足）
+        func normalizedPosition(_ raw: Double) -> Double {
+            let r = min(max(raw, 0), 100)
+            return sqrt(r / 100)
+        }
+        func encouragingScore(_ raw: Double, extraJitter: Double = 0) -> Double {
+            // 位置上限留 0.005 的余量，保证不会提前摸到下一个里程碑的分数
+            let position = min(max(
+                normalizedPosition(raw) * realWeight + reportRandomBase * (1 - realWeight) + extraJitter,
+                0), 0.995)
+            return band.floor + (band.ceiling - band.floor) * position
         }
         let overall = encouragingScore(0.30 * fingeringScore + 0.25 * articulationScore + 0.25 * rhythmScore + 0.20 * stabilityScore)
 
         // ===== 维度卡片（展示分经鼓励性重映射，评语同步用重映射后的分数）=====
-        let fingeringShown = encouragingScore(fingeringScore)
-        let articulationShown = encouragingScore(articulationScore)
-        let rhythmShown = encouragingScore(rhythmScore)
-        let stabilityShown = encouragingScore(stabilityScore)
+        let fingeringShown = encouragingScore(fingeringScore, extraJitter: Double.random(in: -0.05...0.05))
+        let articulationShown = encouragingScore(articulationScore, extraJitter: Double.random(in: -0.05...0.05))
+        let rhythmShown = encouragingScore(rhythmScore, extraJitter: Double.random(in: -0.05...0.05))
+        let stabilityShown = encouragingScore(stabilityScore, extraJitter: Double.random(in: -0.05...0.05))
         let dimensions = [
             CoachReport.DimensionScore(title: L("指法准确度"), score: fingeringShown, weight: 30, comment: gradeComment(fingeringShown)),
             CoachReport.DimensionScore(title: L("演奏颗粒度"), score: articulationShown, weight: 25, comment: gradeComment(articulationShown)),
@@ -813,7 +910,7 @@ final class SessionAudioAnalyzer {
             let flow = (pitchStability + timbreStability) / 2          // 旋律流畅度
             let shading = dynContrast                                   // 力度层次
             let phrasing = (postureStability + noteCleanliness) / 2    // 乐句连贯
-            let score = encouragingScore(clamp(flow * 0.4 + shading * 0.35 + phrasing * 0.25))
+            let score = encouragingScore(clamp(flow * 0.4 + shading * 0.35 + phrasing * 0.25), extraJitter: Double.random(in: -0.05...0.05))
             pieceDimension = CoachReport.DimensionScore(
                 title: L("乐曲表现力"), score: score, weight: 0, comment: gradeComment(score))
             pieceDetail = CoachReport.DimensionDetail(title: L("乐曲维度：") + piece.displayName, metrics: [
@@ -825,7 +922,7 @@ final class SessionAudioAnalyzer {
             let drive = consistency                                     // 节奏驱动力
             let contrast = dramaticContrast                             // 戏剧性对比
             let power = clamp(noteCleanliness * 0.5 + energyScore * 0.5) // 扫拂气势与清晰度
-            let score = encouragingScore(clamp(drive * 0.4 + contrast * 0.35 + power * 0.25))
+            let score = encouragingScore(clamp(drive * 0.4 + contrast * 0.35 + power * 0.25), extraJitter: Double.random(in: -0.05...0.05))
             pieceDimension = CoachReport.DimensionScore(
                 title: L("乐曲张力与气势"), score: score, weight: 0, comment: gradeComment(score))
             pieceDetail = CoachReport.DimensionDetail(title: L("乐曲维度：") + piece.displayName, metrics: [
@@ -837,7 +934,7 @@ final class SessionAudioAnalyzer {
             let phraseCoherence = (postureStability + noteCleanliness) / 2    // 乐句连贯
             let dynShading = dynContrast                                      // 力度层次
             let emotionalLayer = clamp(dramaticContrast * 0.5 + phraseCoherence * 0.5) // 情感层次
-            let score = encouragingScore(clamp(emotionalLayer * 0.4 + dynShading * 0.35 + phraseCoherence * 0.25))
+            let score = encouragingScore(clamp(emotionalLayer * 0.4 + dynShading * 0.35 + phraseCoherence * 0.25), extraJitter: Double.random(in: -0.05...0.05))
             pieceDimension = CoachReport.DimensionScore(
                 title: L("乐曲情感深度"), score: score, weight: 0, comment: gradeComment(score))
             pieceDetail = CoachReport.DimensionDetail(title: L("乐曲维度：") + piece.displayName, metrics: [

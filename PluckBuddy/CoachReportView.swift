@@ -140,6 +140,11 @@ struct CoachReportView: View {
                         .font(.title3).fontWeight(.semibold)
                         .foregroundStyle(theme.headerForeground)
                         .monospacedDigit()
+                    Text(L("时长已计入综合得分，练习越充分分数越高"))
+                        .font(.system(size: 9))
+                        .foregroundStyle(theme.headerSecondaryForeground.opacity(0.85))
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -162,7 +167,7 @@ struct CoachReportView: View {
                         .stroke(scoreColor(report.overallScore), style: StrokeStyle(lineWidth: 8, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     VStack(spacing: 0) {
-                        Text("\(Int(report.overallScore))")
+                        Text(String(format: "%.1f", report.overallScore))
                             .font(.system(size: 34, weight: .bold))
                             .foregroundStyle(scoreColor(report.overallScore))
                         Text(L("综合得分"))

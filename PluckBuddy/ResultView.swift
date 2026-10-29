@@ -212,7 +212,7 @@ struct CoachReportHistoryRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text("\(Int(report.overallScore)) " + L("分"))
+                Text(String(format: "%.1f", report.overallScore) + " " + L("分"))
                     .font(.subheadline.bold())
                     .foregroundStyle(.blue)
                 Text(L("查看"))

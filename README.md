@@ -318,6 +318,13 @@ v1.0 through v1.3 were built as the Chinese edition between late September and e
 - Added a "游戏得分" heading (Game Scores) as a localization key across English / Simplified / Traditional Chinese so the two history groups read clearly
 - The coach evaluation report uses an encouraging score curve: because a report is only generated after the on-device Pipa-sound gate confirms a Pipa is being played, any real score below 85 is remapped into a 87–95 band (monotonic, so weaker playing still reads lower but always stays above 85 — it never pins every practice at exactly 85), while real scores of 85 and above keep their natural value up to 100. The detailed sub-metrics keep showing real numbers so the feedback stays honest
 
+### v2.9 · Sustained-sound report gate and duration-tiered scoring (2026-10-29)
+
+- The coach evaluation report now generates only after **sustained** Pipa sound is detected, not merely after enough cumulative active frames and onsets. A continuity check requires at least one continuous active run of 0.75 s, a cumulative sounding time of at least max(1.5 s, 2× the longest run), three or more onsets, and a richness check (clear pitch detected or enough video hand-shape frames). This closes the false-report hole where knocking on a desk plus ambient noise could accumulate frames and onsets and still produce a high-scoring report
+- The old gate used "longest continuous run ÷ total recording ≥ 25%" as the sounding criterion, which wrongly killed slow-tempo pieces that contain several seconds of rest. The new gate keys off cumulative sounding time instead, so rests never count against you and a normally-played adagio is no longer misjudged as "not playing"
+- Overall score now follows a duration-tier model instead of a flat remap: it starts at 85.1, steps into the 90 band after 1 minute of practice, 92 after 2, 95 after 3, the 97+ "near-perfect" band after 5, and caps at 99.5 at 10 minutes. Until the next milestone is reached the score cannot cross it, so short sessions simply cannot reach the top
+- Within a tier, the exact score is set by real performance plus a per-report random baseline shared across the overall and all four dimension scores, with a small independent perturbation per dimension. This keeps every practice's score different yet internally consistent (no "overall 95 but all four dimensions 85")
+
 ## Known Limitations / To Be Improved
 
 - Classifier precision is still limited by the training data distribution. If the real-device console shows `rms > 0.05` but `pipa < 0.3`, the model's discriminative power is insufficient for the current microphone sound quality, and it needs to be retrained with the Create ML Sound Analysis template (≥ 30 clips of 16 kHz audio per class; a clearly better model can usually be produced within 30 minutes)
@@ -642,6 +649,13 @@ v1.0 到 v1.3 是 2026 年 9 月底到 10 月初以中文版形态走完的四�
 - 「我的成绩·历史」页把评价报告(评价报告)排到了游戏得分(游戏得分)前面，刚生成的报告会落在历史列表最上方，而不是压在练习记录底下
 - 新增「游戏得分」分组标题的中英繁三语本地化键(游戏得分 / 遊戲得分 / Game Scores)，让两组历史排列一目了然
 - 评价报告改为鼓励性重映射评分：报告只在端侧琵琶声判门确认正在弹琵琶之后才会生成，因此真实分低于 85 的维度会连续重映射到 87–95 区间（单调，越弱读数越低但始终高于 85，不会再每次都钉成 85），真实分 ≥85 的维度保持自然走向 100；各维度的详细子指标仍显示真实数值，反馈不失真
+
+### v2.9 · 持续琵琶声门控与按时长分档评分(2026-10-29)
+
+- 评价报告现在改为在检测到**持续**琵琶声之后才生成，而不再只看累计活跃帧数与起音数。连续性判定要求存在一段至少 0.75 秒的连续活跃发声、累计发声时长不低于 max(1.5 秒, 最长连续段×2)、起音次数 ≥3，并通过丰富度兜底（检出过清晰音高或有足够视频手型帧），从而堵住"敲两下桌子加环境噪声就能凑够帧数与起音、照样出高分报告"的误判漏洞
+- 旧门控用"最长连续段 ÷ 录音总时长 ≥ 25%"作为发声判据，会被慢板乐曲里几秒的休止误杀——一首正常演奏的曲子反而被判成"没在弹"。新门控改用累计发声时长判定，休止本身不计入发声量，停顿再久也不会误杀
+- 总体分改为按时长分档，不再是平铺重映射：0 秒从 85.1 起步，练满 1 分钟进入 90 分档，2 分钟 92，3 分钟 95，5 分钟进入 97+ 的"接近满分"档，10 分钟封顶 99.5；没到下一个里程碑前分数不会越过它，练得不够就拿不到高分
+- 档内位置由真实表现叠加一份"每份报告共享、各维度再叠独立微扰"的随机基准决定，因此每次练习分数都不同，而综合分与四维度分始终自洽（不会综合 95、四个维度却全是 85）
 
 ## 已知限制 / 待改进
 

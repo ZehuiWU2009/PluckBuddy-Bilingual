@@ -102,10 +102,10 @@
 "单次练习30分钟" = "Practice for 30 minutes in one session";
 "历史" = "History";
 "取消" = "Cancel";
-"向上" = "Upward";
+"向上" = "Upward Brush";
 "向上: %d 次 | 向下: %d 次\n" = "Up: %d times | Down: %d times\n";
 "向上扫和向下扫都要练习，保持方向平衡" = "Practice both up and down sweeps, keeping direction balanced";
-"向下" = "Downward";
+"向下" = "Downward Sweep";
 "启用节拍器" = "Enable Metronome";
 "均值: %.1f" = "Avg: %.1f";
 "均匀度" = "Evenness";
@@ -417,6 +417,7 @@
 "关闭" = "Close";
 "练习曲目" = "Practice Piece";
 "演奏时长" = "Performance Duration";
+"时长已计入综合得分，练习越充分分数越高" = "Practice duration sets your score band — 1 min for 90, 2 min for 92, 3 min for 95, 5 min near perfect";
 "综合得分" = "Overall Score";
 "总体评价" = "Overall Assessment";
 "技术维度得分" = "Technical Dimension Scores";
@@ -867,3 +868,5 @@
 "机械" = "Mechanical";
 "静音" = "Mute";
 "有效演奏数据不足，请实际弹奏后再试" = "Not enough valid performance data. Please play and try again.";
+"未检测到持续的琵琶声，无法生成评价报告。请连续弹奏一段后再试。" = "No sustained Pipa sound detected, so no evaluation report could be generated. Please play a continuous passage and try again.";
+"未听到持续的琵琶声，请连续弹奏一段后再试" = "No sustained Pipa sound heard. Please play a continuous passage and try again";

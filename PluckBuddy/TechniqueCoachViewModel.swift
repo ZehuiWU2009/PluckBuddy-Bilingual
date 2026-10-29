@@ -91,6 +91,26 @@ class TechniqueCoachViewModel: ObservableObject {
     
     /// 声音分类是否已产出过结果——没结果前不做门控，避免开局就把画面判死
     private var hasSoundResult = false
+
+    /// 「持续听到琵琶声」的判定参数。
+    /// 模型窗口 15600 @16 kHz ≈ 0.98 秒、重叠一半，即约每 0.49 秒出一个分类结果；
+    /// 连续 3 次判为琵琶声 ≈ 持续 1.5 秒以上，足以排除敲桌子、说话、清嗓子等瞬态。
+    private static let minConsecutivePipaWindows = 3
+
+    /// 累计判据：整场练习里判为琵琶声的窗口总数下限。
+    /// 只看「最长连续段」会误杀慢板乐曲——乐句本身短于 1.5 秒时凑不满 3 个连续窗，
+    /// 但整首曲子明明弹得很完整。所以再加一条通道：累计够多的琵琶声窗口也算通过。
+    /// 8 个窗口约合 4 秒实际琵琶声，敲桌子这类瞬态凑不到这个量。
+    private static let minTotalPipaWindows = 8
+
+    /// 当前连续判为琵琶声的分类窗口数
+    private var consecutivePipaWindows = 0
+    /// 本次会话里最长的一段连续琵琶声（窗口数）
+    private var longestPipaRun = 0
+    /// 本次会话里累计判为琵琶声的窗口总数
+    private var totalPipaWindows = 0
+    /// 最近的分类窗口判定结果（true = 琵琶声），用于实时门的累计判据
+    private var recentPipaFlags: [Bool] = []
     
     // MARK: - 技法去抖
     /// 分类器在中间帧会抖动（同一段演奏在「轮指/弹挑/扫弦/未识别」之间跳），
@@ -134,6 +154,13 @@ class TechniqueCoachViewModel: ObservableObject {
         techniqueClassifier.reset()
         visionTechniqueClassifier.reset()
         report = nil
+
+        // 持续琵琶声的连续计数也要清零，否则上一轮的记录会让本轮开局就通过判定
+        consecutivePipaWindows = 0
+        longestPipaRun = 0
+        totalPipaWindows = 0
+        recentPipaFlags.removeAll()
+        isPipaSoundDetected = false
         
         // 2. 初始化视频捕获
         videoCapture = VideoCaptureManager()
@@ -183,20 +210,34 @@ class TechniqueCoachViewModel: ObservableObject {
         soundClassifier.stop()
         hasSoundResult = false
         soundSceneLabel = "已停止"
-        
+
         // 停止计时器
         stopDurationTimer()
-        
+
         if let start = startTime {
             sessionDuration = Date().timeIntervalSince(start)
             print("   - 分析时长: \(String(format: "%.1f", sessionDuration))秒")
         }
 
+        // 「持续听到琵琶声」规则：本次会话里必须真正在弹琵琶。
+        // 整段练习都只有零散瞬态（敲桌子、清嗓子、背景音）时一律视为没听到琵琶声，
+        // 不出报告——宁可不给分，也不要给一个建立在误判上的高分。
+        //
+        // 两条通道任一成立即通过：
+        //   ① 连续通道：存在一段连续的琵琶声（≥3 个分类窗，约 1.5 秒）；
+        //   ② 累计通道：整场累计判为琵琶声的窗口数 ≥8（约 4 秒实际琵琶声）。
+        // ② 是为乐曲停顿兜底的——慢板曲目的乐句往往短于 1.5 秒，
+        // 乐句之间的休止会打断连续段，只看连续就会把完整演奏误判成没在弹。
+        let continuousOK = longestPipaRun >= Self.minConsecutivePipaWindows
+        let cumulativeOK = totalPipaWindows >= Self.minTotalPipaWindows
+        let sustainedPipaHeard = continuousOK || cumulativeOK
+        print("🎼 持续琵琶声判定：最长连续 \(longestPipaRun) 窗（需 ≥ \(Self.minConsecutivePipaWindows)）| 累计 \(totalPipaWindows) 窗（需 ≥ \(Self.minTotalPipaWindows)）→ \(sustainedPipaHeard ? "通过" : "不通过")")
+
         // 没有足够的琵琶声音与手型证据时不生成分数，避免静音也得到 70+。
-        guard audioAnalyzer.hasSufficientEvidence(duration: sessionDuration) else {
+        guard sustainedPipaHeard && audioAnalyzer.hasSufficientEvidence(duration: sessionDuration) else {
             report = nil
-            reportBlockedReason = L("未检测到琵琶声，无法生成评价报告。请实际弹奏后再试。")
-            statusMessage = L("有效演奏数据不足，请实际弹奏后再试")
+            reportBlockedReason = L("未检测到持续的琵琶声，无法生成评价报告。请连续弹奏一段后再试。")
+            statusMessage = L("未听到持续的琵琶声，请连续弹奏一段后再试")
             detectedTechnique = .unknown
             handPose = nil
             leftHandDetected = false
@@ -206,7 +247,7 @@ class TechniqueCoachViewModel: ObservableObject {
             motionFeatureExtractor.reset()
             techniqueClassifier.reset()
         visionTechniqueClassifier.reset()
-            print("⚠️ 有效演奏数据不足，本次不生成评分报告")
+            print("⚠️ 未听到持续的琵琶声（或有效演奏数据不足），本次不生成评分报告")
             return
         }
 
@@ -739,7 +780,35 @@ class TechniqueCoachViewModel: ObservableObject {
         hasSoundResult = true
         soundSceneLabel = label
         pipaConfidence = pipaProbability
-        isPipaSoundDetected = label == "琵琶声" && pipaProbability >= 0.5
+
+        let isPipaNow = label == "琵琶声" && pipaProbability >= 0.5
+
+        // 「持续听到琵琶声」：单次分类为琵琶声不算数，必须连续若干个窗口都判为琵琶声。
+        // 模型窗口约 0.98 秒、重叠一半，即每 ~0.49 秒出一个结果；
+        // 连续 3 次即代表约 1.5 秒以上的持续琵琶声，足以排除敲桌子、说话等瞬态误判。
+        if isPipaNow {
+            consecutivePipaWindows += 1
+            totalPipaWindows += 1
+        } else {
+            consecutivePipaWindows = 0
+        }
+
+        // 历史连续段最长值：用于「整段练习里至少有一段持续的琵琶声」的判定
+        longestPipaRun = max(longestPipaRun, consecutivePipaWindows)
+
+        // 最近的判定序列：用于实时门的累计判据（乐曲停顿会打断连续段，
+        // 但不代表整场没在弹，所以额外保留一条累计通道）
+        recentPipaFlags.append(isPipaNow)
+        if recentPipaFlags.count > 20 { recentPipaFlags.removeFirst() }
+
+        // 实时显示用的瞬时状态：连续成立后才置位，避免界面标签抖动。
+        // 判定放宽为「连续 3 窗」或「最近 20 窗（约 9.8 秒）内累计 4 窗」——
+        // 后者让慢板乐曲（乐句短、停顿长）也能正常启动实时评分。
+        // 20 窗的跨度要能覆盖慢板曲目的一个完整乐句周期，
+        // 否则乐句之间的休止会把累计数压到阈值以下。
+        let recentPipaCount = recentPipaFlags.filter { $0 }.count
+        isPipaSoundDetected = consecutivePipaWindows >= Self.minConsecutivePipaWindows
+            || (recentPipaFlags.count >= 20 && recentPipaCount >= 4)
     }
     
     // MARK: - Permissions
@@ -794,14 +863,19 @@ struct HandMotionFeatures {
 
 // MARK: - 姿势评估结果
 
-struct PostureEvaluation {
+/// 姿势评估结果。
+/// 显式声明 Equatable：视图层用 `.onChange(of: currentEvaluation)` 观察它，
+/// SwiftUI 的 onChange 要求被观察值满足 Equatable，否则编译报
+/// "Referencing instance method 'onChange(of:initial:_:)' on 'Optional' requires that ... conform to 'Equatable'"。
+/// 成员均为 Double / String / 枚举与数组，合成 == 即可。
+struct PostureEvaluation: Equatable {
     var overallScore: Double        // 0-100 总分
     var aspects: [EvaluationAspect] // 各维度评分
     var suggestions: [String]       // 改进建议
 }
 
-struct EvaluationAspect {
-    enum Category: String {
+struct EvaluationAspect: Equatable {
+    enum Category: String, Equatable {
         // rawValue 只能是字面量，保持中文原文；界面展示统一走 displayName
         case handShape = "手型"
         case tigerMouth = "虎口角度"
