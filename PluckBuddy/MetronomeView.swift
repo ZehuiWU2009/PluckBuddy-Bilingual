@@ -3,7 +3,7 @@
 //  PluckBuddy
 //
 //  节拍器可视化组件
-//  Created by Zehui Wu on 2026/8/29.
+//  Created by 吴泽荟（Zehui Wu） on 2026/8/29.
 //
 
 import SwiftUI

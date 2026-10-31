@@ -2,7 +2,7 @@
 //  PracticeSession.swift
 //  PluckBuddy
 //
-//  Created by Zehui Wu on 2026/7/16.
+//  Created by 吴泽荟（Zehui Wu） on 2026/7/16.
 //
 
 import Foundation

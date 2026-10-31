@@ -2,7 +2,7 @@
 //  PipaSoundGate.swift
 //  PluckBuddy
 //
-//  Created by Zehui Wu on 2026/9/30.
+//  Created by 吴泽荟（Zehui Wu） on 2026/9/30.
 //
 //  智能调音模块的「琵琶声」判门。复用指法教练里的 PipaSoundClassifier CoreML 模型，
 //  但不接管 AVAudioEngine 和音频会话——麦克风数据由 AudioManager 提供（避免和指法教练/陪练模块抢 tap）。

@@ -2,7 +2,7 @@
 //  MainMenuExample.swift
 //  PluckBuddy
 //
-//  Created by Zehui Wu on 2026-09-08.
+//  Created by 吴泽荟（Zehui Wu） on 2026-09-08.
 //  主界面集成示例 - 展示如何添加社交广场入口
 //
 

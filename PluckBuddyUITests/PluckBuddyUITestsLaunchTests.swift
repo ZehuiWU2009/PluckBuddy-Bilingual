@@ -2,7 +2,7 @@
 //  PluckBuddyUITestsLaunchTests.swift
 //  PluckBuddyUITests
 //
-//  Created by Zehui Wu on 2026/7/15.
+//  Created by 吴泽荟（Zehui Wu） on 2026/7/15.
 //
 
 import XCTest

@@ -3,7 +3,7 @@
 //  PluckBuddy
 //
 //  节拍器管理器 - 优化版（修复声音和性能问题）
-//  Created by Zehui Wu on 2026/8/29.
+//  Created by 吴泽荟（Zehui Wu） on 2026/8/29.
 //
 
 import Foundation

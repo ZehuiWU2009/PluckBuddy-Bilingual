@@ -2,7 +2,7 @@
 //  AchievementView.swift
 //  PluckBuddy
 //
-//  Created by Zehui Wu on 2026-09-08.
+//  Created by 吴泽荟（Zehui Wu） on 2026-09-08.
 //  成就勋章视图
 //
 

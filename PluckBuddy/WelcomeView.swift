@@ -2,7 +2,7 @@
 //  WelcomeView.swift
 //  PluckBuddy
 //
-//  Created by Zehui Wu on 2026/9/29.
+//  Created by 吴泽荟（Zehui Wu） on 2026/9/29.
 //
 //  启动欢迎页。展示 PluckBuddy 品牌标识与每日练习引导语，
 //  倒计时 3 秒后自动进入主界面；右上角「跳过 3」可立即进入。

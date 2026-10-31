@@ -2,7 +2,7 @@
 //  CameraManager.swift
 //  PluckBuddy
 //
-//  Created by Zehui Wu on 2026/8/17.
+//  Created by 吴泽荟（Zehui Wu） on 2026/8/17.
 //
 
 import AVFoundation
