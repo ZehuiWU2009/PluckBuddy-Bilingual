@@ -2,7 +2,7 @@
 //  FlowerSettingsSheet.swift
 //  PluckBuddy
 //
-//  Created on 2026/8/31.
+//  Created by Zehui Wu on 2026/8/31.
 //
 
 import SwiftUI

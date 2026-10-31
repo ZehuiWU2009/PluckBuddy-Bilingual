@@ -3,7 +3,7 @@
 //  PluckBuddy
 //
 //  技法评估器集合
-//  Created on 2026/8/29.
+//  Created by Zehui Wu on 2026/8/29.
 //
 
 import Foundation

@@ -2,7 +2,7 @@
 //  TechniqueCoachView.swift
 //  PluckBuddy
 //
-//  Created by 吴泽荟 on 2026/7/29.
+//  Created by Zehui Wu on 2026/7/29.
 //
 
 import SwiftUI

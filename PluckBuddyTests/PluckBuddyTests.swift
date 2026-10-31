@@ -2,7 +2,7 @@
 //  PluckBuddyTests.swift
 //  PluckBuddyTests
 //
-//  Created by 吴泽荟 on 2026/7/15.
+//  Created by Zehui Wu on 2026/7/15.
 //
 
 import Testing

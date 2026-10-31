@@ -5,7 +5,7 @@
 //  手部姿态工具类 - 提供手部姿态平滑、可视化和几何计算工具
 //  注意：HandPoseExtractor 和 HandKeypoint 已在 HandPoseExtractor.swift 中定义
 //  注意：HandPoseData 和 HandPoseAnalyzer 已在 TechniqueCoachViewModel.swift 中定义
-//  Created on 2026/8/31.
+//  Created by Zehui Wu on 2026/8/31.
 //
 
 import Vision

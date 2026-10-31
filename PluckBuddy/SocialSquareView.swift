@@ -2,7 +2,7 @@
 //  SocialSquareView.swift
 //  PluckBuddy
 //
-//  Created on 2026-09-08.
+//  Created by Zehui Wu on 2026-09-08.
 //  社交广场 - 离线模拟版本
 //
 
