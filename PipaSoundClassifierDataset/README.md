@@ -12,7 +12,7 @@ and the recording process is documented.
 
 ## Embedded in PluckBuddy-Bilingual
 
-This dataset is bundled as a subfolder named `PipaSoundClassifierDataset/` inside the [PluckBuddy-Bilingual](https://github.com/ZehuiWU2009/PluckBuddy-Bilingual) app project. Because it was recorded and built exclusively for that app, the folder travels with the app's source tree. The real 627 MB of audio is kept in this standalone repository (tracked with Git LFS) so that the app repository itself stays lightweight; the app's README links back here.
+This dataset is bundled as a subfolder named `PipaSoundClassifierDataset/` inside the [PluckBuddy-Bilingual](https://github.com/ZehuiWU2009/PluckBuddy-Bilingual) app project. Because it was recorded and built exclusively for that app, the folder travels with the app's source tree. The real 826 MB of audio is kept in this standalone repository (tracked with Git LFS) so that the app repository itself stays lightweight; the app's README links back here.
 
 ## What is inside
 
@@ -20,17 +20,17 @@ Four folders, one per class:
 
 | Folder             | What it contains                                                                                              | Approx. size |
 | ------------------ | ------------------------------------------------------------------------------------------------------------- | ------------ |
-| `pipa/`            | My own Pipa playing — different fingering techniques (pluck, roll, sweep, long tones) and Pipa pieces I performed on stage. | ~40 MB       |
+| `pipa/`            | My own Pipa playing — different fingering techniques (pluck, roll, sweep, long tones) and Pipa pieces I performed on stage. | ~206 MB      |
 | `other_instrument/`| Instruments I play myself: drum kit I drummed, guitar, zhongruan and piano I played, and songs I sang. My grandfather's harmonica playing is also put to use here — it is the clip
-`Melodica.m4a`. Because I do not play guzheng, three guzheng pieces from the Mid-Autumn set were AI-generated and added in, to avoid publishing anyone else's recording. Ten of the clips (drum / guitar / zhongruan / voice+piano) were captured on video and kept as `.m4a` files that carry **both** an AAC audio track and a video track re-encoded to 640x480, so the performance stays visible as well as audible. | ~430 MB      |
-| `speech/`          | My own voice — classroom talks and debate-competition speeches, recorded as a contrast to Pipa timbre. `speech01-03.m4a` also keep a 640x480 video track. | ~154 MB      |
+`Melodica.mp4`. Because I do not play guzheng, three guzheng pieces from the Mid-Autumn set were AI-generated and added in, to avoid publishing anyone else's recording. Ten of the clips (drum / guitar / zhongruan / voice+piano) were captured on video and kept as `.mp4` files that carry **both** an AAC audio track and a 640x480 video track, so the performance stays visible as well as audible. | ~462 MB      |
+| `speech/`          | My own voice — classroom talks and debate-competition speeches, recorded as a contrast to Pipa timbre. `speech01-03.mp4` also carry a 640x480 video track. | ~154 MB      |
 | `background/`      | Everyday environmental noise — ambience from inside my home (e.g. the air conditioner) and street noise captured out on the road. | ~4 MB        |
 
 All clips are either self-recorded by the author, contributed by family
 (recorded with permission), or AI-generated; everything is cleared for public
-sharing. Total: 37 clips (~627 MB), in `.m4a` / `.mp3`.
+sharing. Total: 42 clips (~826 MB), in `.mp4` / `.m4a` / `.mp3`.
 
-The thirteen video-derived clips are stored with Git LFS. Their video tracks are
+The thirteen video-derived clips are stored as `.mp4` with Git LFS. Their video tracks are
 downscaled to 640x480 to keep the repository manageable — they are kept purely
 for documentation (showing that the recordings really are performances on those
 instruments), while training consumes only the audio.
@@ -84,7 +84,7 @@ See `LICENSE`.
 
 ## 内嵌于 PluckBuddy-Bilingual
 
-本数据集作为子文件夹 `PipaSoundClassifierDataset/` 随 [PluckBuddy-Bilingual](https://github.com/ZehuiWU2009/PluckBuddy-Bilingual) 应用工程一起发布。因为它专为这个 App 录制、目前只供这一个应用使用，所以跟着工程源码走。627 MB 真实音频仍留在这个独立仓库里（用 Git LFS 跟踪），这样应用仓库本身保持轻量；应用工程的 README 会反向链接到本仓库。
+本数据集作为子文件夹 `PipaSoundClassifierDataset/` 随 [PluckBuddy-Bilingual](https://github.com/ZehuiWU2009/PluckBuddy-Bilingual) 应用工程一起发布。因为它专为这个 App 录制、目前只供这一个应用使用，所以跟着工程源码走。826 MB 真实音频仍留在这个独立仓库里（用 Git LFS 跟踪），这样应用仓库本身保持轻量；应用工程的 README 会反向链接到本仓库。
 
 ## 里面有什么
 
@@ -92,15 +92,15 @@ See `LICENSE`.
 
 | 文件夹             | 内容                                                                                              | 大约大小 |
 | ------------------ | ------------------------------------------------------------------------------------------------- | -------- |
-| `pipa/`            | 我自己弹的琵琶——不同指法的练习（弹挑、轮指、扫弦、长音），还有我在舞台上弹的琵琶乐曲。            | 约 40 MB |
-| `other_instrument/`| 我自己会演奏的乐器：我打的架子鼓，弹的吉他、中阮、钢琴，还有自己唱的歌。我爷爷吹的口琴声，我也把它利用了起来（就是 `Melodica.m4a` 这一段）。古筝我不会弹，为了避免侵权，就用了 AI 生成的三段中秋古筝曲加进来。其中有十段（鼓、吉他、中阮、人声+钢琴）是录了视频的，保留成同时带 AAC 音轨和 640x480 视频轨的 `.m4a`，既能听也能看到演奏画面。 | 约 430 MB |
-| `speech/`          | 我自己的声音——课堂上的发言，还有辩论赛的发言，用来和琵琶的音色作对比。`speech01-03.m4a` 同样保留了 640x480 视频轨。 | 约 154 MB |
+| `pipa/`            | 我自己弹的琵琶——不同指法的练习（弹挑、轮指、扫弦、长音），还有我在舞台上弹的琵琶乐曲。            | 约 206 MB |
+| `other_instrument/`| 我自己会演奏的乐器：我打的架子鼓，弹的吉他、中阮、钢琴，还有自己唱的歌。我爷爷吹的口琴声，我也把它利用了起来（就是 `Melodica.mp4` 这一段）。古筝我不会弹，为了避免侵权，就用了 AI 生成的三段中秋古筝曲加进来。其中有十段（鼓、吉他、中阮、人声+钢琴）是录了视频的，保留成同时带 AAC 音轨和 640x480 视频轨的 `.mp4`，既能听也能看到演奏画面。 | 约 462 MB |
+| `speech/`          | 我自己的声音——课堂上的发言，还有辩论赛的发言，用来和琵琶的音色作对比。`speech01-03.mp4` 同样保留了 640x480 视频轨。 | 约 154 MB |
 | `background/`      | 日常的环境噪音——家里录的环境声（比如空调），还有在马路上录到的街边噪音。                          | 约 4 MB  |
 
 所有片段要么是作者本人录制，要么是家人录制（已获授权），要么是 AI 生成，都可以
-公开发布。一共 37 段（约 627 MB），格式为 `.m4a` / `.mp3`。
+公开发布。一共 42 段（约 826 MB），格式为 `.mp4` / `.m4a` / `.mp3`。
 
-这十三段带视频的片段用 Git LFS 存储，视频轨统一降到 640x480 以控制仓库体积——
+这十三段带视频的片段以 `.mp4` 格式用 Git LFS 存储，视频轨统一降到 640x480 以控制仓库体积——
 它们纯粹是为了留档（证明这些录音确实是那些乐器上的演奏），训练时只用音频。
 
 ## 原始录音如何变成训练样本

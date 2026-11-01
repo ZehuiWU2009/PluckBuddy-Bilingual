@@ -2,6 +2,8 @@
 //  CoachReport.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/10/29.
+//
 //  智能指法教练的「分析评价报告」数据模型与端侧分析器。
 //  报告融合两种真实评价信号：
 //   1) 视频手型评估（智能指法教练正在使用的 Vision 21 关键点 + 虎口角度，见 TechniqueEvaluators）

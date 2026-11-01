@@ -2,6 +2,8 @@
 //  VisionTechniqueClassifier.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/10/27.
+//
 //  基于 Apple Vision 21 关键点的指法分类器，区分三类指法：
 //    弹挑 (pluck)  —— 食指与拇指交替拨动，手腕基本不动、转动很小；
 //                     残差只集中在食/拇（ndom≈2，噪声偶使第三指记 1 帧→ndom≈3）。

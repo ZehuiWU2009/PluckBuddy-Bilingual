@@ -2,6 +2,8 @@
 //  Localization.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/10/22.
+//
 //  应用内中英双语支持：key 即中文原文，英文文案在 en.lproj/Localizable.strings。
 //  取不到英文时回退为 key（即中文），因此中文环境无需单独建表。
 //

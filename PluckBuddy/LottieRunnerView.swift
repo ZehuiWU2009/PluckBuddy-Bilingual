@@ -2,6 +2,8 @@
 //  LottieRunnerView.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/10/11.
+//
 //  Lottie 跑步动画视图
 //
 

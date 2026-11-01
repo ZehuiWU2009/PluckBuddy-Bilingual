@@ -2,6 +2,8 @@
 //  LanguageSettingView.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/10/11.
+//
 //  语言选择页：跟随系统 / 中文 / English
 //
 

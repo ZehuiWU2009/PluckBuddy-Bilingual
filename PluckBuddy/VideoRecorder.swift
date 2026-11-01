@@ -2,6 +2,8 @@
 //  VideoRecorder.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/7/19.
+//
 //  视频录制管理器
 //
 

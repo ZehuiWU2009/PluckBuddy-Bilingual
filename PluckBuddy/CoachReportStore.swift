@@ -2,6 +2,8 @@
 //  CoachReportStore.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/10/22.
+//
 //  评价报告历史持久化：以 JSON 存放于 Application Support，完全离线，不落盘麦克风音频。
 //
 

@@ -2,6 +2,8 @@
 //  CameraPreviewView.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/7/19.
+//
 //  摄像头预览视图
 //
 

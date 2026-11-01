@@ -2,6 +2,8 @@
 //  DSPFeatureExtractor.swift
 //  PluckBuddy
 //
+//  Created by 吴泽荟（Zehui Wu） on 2026/10/1.
+//
 //  基于 PipaDetection 方案的 DSP 特征提取器
 //  提取琵琶声特征：基频、谐波比、频谱质心、起音检测、包络衰减
 //

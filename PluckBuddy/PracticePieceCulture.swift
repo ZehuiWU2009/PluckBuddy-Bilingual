@@ -1,3 +1,9 @@
+//
+//  PracticePieceCulture.swift
+//  PluckBuddy
+//
+//  Created by 吴泽荟（Zehui Wu） on 2026/10/21.
+//
 // 曲目文化内容：与评分及布局分离，中文原文同时作为本地化键。
 // 资料来源与版本说明见 docs/piece-culture-sources.md。
 import Foundation
