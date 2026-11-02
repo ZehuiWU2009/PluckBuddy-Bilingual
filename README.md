@@ -44,12 +44,12 @@ A self-trained four-class model is built in: `PipaSoundClassifier.mlmodel`. Its 
 
 ### Contribution 3 · An Open Pipa Sound Dataset Published as a Reusable Data Asset
 
-The classifier above is only as good as the audio behind it, so that audio is published on its own rather than kept private. The training corpus behind `PipaSoundClassifier.mlmodel` is bundled as a subfolder `PipaSoundClassifierDataset/` inside this repository, and is also mirrored as a standalone repository, [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset), released under CC BY 4.0. The 826 MB of real audio is tracked there with Git LFS, while this repo carries the dataset's README, license and class-folder layout as the in-tree copy.
+The classifier above is only as good as the audio behind it, so that audio is published on its own rather than kept private. The training corpus behind `PipaSoundClassifier.mlmodel` is bundled as a subfolder `PipaSoundClassifierDataset/` inside this repository, and is also mirrored as a standalone repository, [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset), released under CC BY 4.0. The 887 MB of real audio is tracked there with Git LFS, while this repo carries the dataset's README, license and class-folder layout as the in-tree copy.
 
-- **What it holds**: 42 clips in total, roughly 826 MB, split into the four classes the gate needs — `pipa/` 7 clips of my own playing across different techniques, `other_instrument/` 23 clips of instruments I play myself plus three AI-generated guzheng pieces, `speech/` 6 clips of my own voice, `background/` 6 clips of everyday ambience
+- **What it holds**: 43 clips in total, roughly 887 MB, split into the four classes the gate needs — `pipa/` 7 clips of my own playing across different techniques, `other_instrument/` 24 clips of instruments I play myself plus three AI-generated guzheng pieces, `speech/` 6 clips of my own voice, `background/` 6 clips of everyday ambience
 - **Every clip is cleared for release**: each one is either self-recorded, contributed by family with permission, or AI-generated, so nothing third-party is republished
 - **A documented sampling pipeline**: every recording is mixed to mono, resampled to 16 kHz by linear interpolation, and sliced into 15,600-sample windows of about 0.975 s advancing at 50% overlap, then fed to the classifier as raw waveform — the same window the released model takes
-- **Provenance kept visible**: 13 clips carry a 640×480 video track alongside the audio, stored as `.mp4` through Git LFS, so a listener can confirm what was actually played; training consumes only the audio
+- **Provenance kept visible**: 25 clips carry a 640×480 video track alongside the audio, stored as `.mp4` through Git LFS, so a listener can confirm what was actually played; training consumes only the audio
 - **Why it is a data asset rather than a footnote**: the negative classes are what make the gate useful, and negative audio is the hardest kind to collect. Publishing it means anyone can retrain the gate on the same footing instead of guessing at what "not a Pipa" should sound like
 
 ### Contribution 4 · Real-Time Algorithms: 4096-Point FFT + Kalman Filtering
@@ -201,7 +201,7 @@ PluckBuddy/
 │   ├── SweepDetector.swift       # Sweep detection
 │   ├── Animations/               # Lottie animation JSON
 │   └── Assets.xcassets/          # Assets (Logo, etc.)
-├── PipaSoundClassifierDataset/  # Training audio for PipaSoundClassifier — bundled subfolder; real 826 MB audio stays in the standalone repo via Git LFS
+├── PipaSoundClassifierDataset/  # Training audio for PipaSoundClassifier — bundled subfolder; real 887 MB audio stays in the standalone repo via Git LFS
 └── PluckBuddyTests/              # Unit test target
 ```
 
@@ -378,12 +378,12 @@ Source code of a personal project; discussion and learning welcome.
 
 ### 贡献 3 · 作为可复用数据资产公开的琵琶声音数据集
 
-上面那个分类器有多准，取决于它背后的音频。因此这批音频没有留在本地，而是作为子文件夹 PipaSoundClassifierDataset/ 内嵌在本工程里，同时也作为独立仓库 [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset)（以 CC BY 4.0 发布）镜像维护。826 MB 真实音频在那个独立仓库里走 Git LFS 跟踪，本工程只携带数据集的 README、许可和各类别文件夹骨架作为树内副本。
+上面那个分类器有多准，取决于它背后的音频。因此这批音频没有留在本地，而是作为子文件夹 PipaSoundClassifierDataset/ 内嵌在本工程里，同时也作为独立仓库 [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset)（以 CC BY 4.0 发布）镜像维护。887 MB 真实音频在那个独立仓库里走 Git LFS 跟踪，本工程只携带数据集的 README、许可和各类别文件夹骨架作为树内副本。
 
-- **收录了什么**：共 42 段、约 826 MB，按判门需要的四个类别分开——`pipa/` 7 段我自己弹的琵琶（覆盖不同指法）、`other_instrument/` 23 段我自己会演奏的乐器加三段 AI 生成的古筝、`speech/` 6 段我自己的声音、`background/` 6 段日常环境噪音
+- **收录了什么**：共 43 段、约 887 MB，按判门需要的四个类别分开——`pipa/` 7 段我自己弹的琵琶（覆盖不同指法）、`other_instrument/` 24 段我自己会演奏的乐器加三段 AI 生成的古筝、`speech/` 6 段我自己的声音、`background/` 6 段日常环境噪音
 - **每一段都可公开**：要么是本人录制，要么是家人录制并已获授权，要么是 AI 生成，没有转引他人录音
 - **采样流程完整记录**：每段录音都混为单声道，线性插值降采样到 16 kHz，切成 15,600 个采样点、约 0.975 秒的窗口并以 50% 重叠推进，再把原始波形送进分类器——与已发布模型接受的窗口一致
-- **来源可见**：其中 13 段在音频之外还带 640x480 视频轨，以 `.mp4` 格式通过 Git LFS 存放，让人能确认当时到底弹了什么；训练只用音频
+- **来源可见**：其中 25 段在音频之外还带 640x480 视频轨，以 `.mp4` 格式通过 Git LFS 存放，让人能确认当时到底弹了什么；训练只用音频
 - **为什么算数据资产而不是脚注**：真正让判门有用的，是那些负样本；而负样本恰恰是最难收集的。把它公开，意味着别人可以在同样的起点上重训这道判门，而不必自己猜"非琵琶"该是什么声音
 
 ### 贡献 4 · 4096 点 FFT + 卡尔曼滤波的实时算法
@@ -534,7 +534,7 @@ PluckBuddy/
 │   ├── SweepDetector.swift       # 扫弦检测
 │   ├── Animations/               # Lottie 动画 JSON
 │   └── Assets.xcassets/          # 资源(Logo 等)
-├── PipaSoundClassifierDataset/  # PipaSoundClassifier 的训练音频——内嵌子文件夹;826 MB 真实音频在独立仓库走 Git LFS
+├── PipaSoundClassifierDataset/  # PipaSoundClassifier 的训练音频——内嵌子文件夹;887 MB 真实音频在独立仓库走 Git LFS
 └── PluckBuddyTests/              # 单元测试 target
 ```
 
