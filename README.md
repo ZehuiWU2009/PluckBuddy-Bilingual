@@ -20,6 +20,11 @@ An intelligent Pipa practice companion iOS app built on on-device CoreML. The ca
 - Demonstrated the project live on stage at the conference as the **only primary/secondary-school representative**.
 - Conference photos, the stage presentation and demonstration videos, and the English feature deck are archived in [`docs/CCCC-MAIC/`](docs/CCCC-MAIC/).
 
+## Availability & Press
+
+- **Now on the App Store**: [PluckBuddy](https://apps.apple.com/cn/app/pluckbuddy/id6824425608) is available for download on iOS.
+- **Interview with Apple**: Apple interviewed the developer, Zehui Wu, and published [「移动应用创新赛，听听她的好点子」](https://www.xiaohongshu.com/discovery/item/6af032540000000015009ff2?xsec_token=ABGYVgZb2HZKZH8hneihDgHhve3lu9lVEoICv6WdHYOwk=&xsec_source=pc_share) on its official Xiaohongshu account @Apple.
+
 ## Technical Contributions of This Project
 
 The project makes technical innovations and engineering trade-offs in the following six directions.
@@ -359,6 +364,11 @@ Source code of a personal project; discussion and learning welcome.
 - **一等奖**:中国高校计算机大赛 · 2026 移动应用创新赛(启航赛道 · 中小学组)。
 - 作为中小学生唯一代表,在大会现场演示了本项目。
 - 大会现场照片、演示视频与英文版功能介绍已归档在 [`docs/CCCC-MAIC/`](docs/CCCC-MAIC/)。
+
+## 上架与报道
+
+- **已上线 App Store**:[PluckBuddy](https://apps.apple.com/cn/app/pluckbuddy/id6824425608) 现已开放下载。
+- **Apple 专访**:Apple 对开发者吴泽荟做了专访,并在小红书 @Apple 官方账号发布了 [「移动应用创新赛，听听她的好点子」](https://www.xiaohongshu.com/discovery/item/6af032540000000015009ff2?xsec_token=ABGYVgZb2HZKZH8hneihDgHhve3lu9lVEoICv6WdHYOwk=&xsec_source=pc_share)。
 
 ## 本项目的技术贡献
 
