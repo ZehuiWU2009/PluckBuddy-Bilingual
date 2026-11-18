@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3C0B89873008ACD700231A43 /* RollDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0B89863008ACD700231A43 /* RollDetector.swift */; };
-		3C0B89893008AD0700231A43 /* FlowerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0B89883008AD0700231A43 /* FlowerViewModel.swift */; };
 		3CF7A4FA300D1C86004C1AE1 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 3CF7A4F9300D1C86004C1AE1 /* Lottie */; };
 /* End PBXBuildFile section */
 
@@ -30,8 +28,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		3C0B89863008ACD700231A43 /* RollDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollDetector.swift; sourceTree = "<group>"; };
-		3C0B89883008AD0700231A43 /* FlowerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerViewModel.swift; sourceTree = "<group>"; };
 		3C6212223007C60C000F0CF0 /* PluckBuddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PluckBuddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C6212343007C60E000F0CF0 /* PluckBuddyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PluckBuddyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C62123E3007C60E000F0CF0 /* PluckBuddyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PluckBuddyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -109,8 +105,6 @@
 				3C6212373007C60E000F0CF0 /* PluckBuddyTests */,
 				3C6212413007C60E000F0CF0 /* PluckBuddyUITests */,
 				3C6212233007C60C000F0CF0 /* Products */,
-				3C0B89863008ACD700231A43 /* RollDetector.swift */,
-				3C0B89883008AD0700231A43 /* FlowerViewModel.swift */,
 				3CF7A4F8300D1C86004C1AE1 /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -282,8 +276,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3C0B89893008AD0700231A43 /* FlowerViewModel.swift in Sources */,
-				3C0B89873008ACD700231A43 /* RollDetector.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
