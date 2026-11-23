@@ -55,7 +55,7 @@ A self-trained four-class model is built in: `PipaSoundClassifier.mlmodel`. Its 
 
 ### Contribution 3 · An Open Pipa Sound Dataset Published as a Reusable Data Asset
 
-The classifier above is only as good as the audio behind it, so that audio is published on its own rather than kept private. The training corpus behind `PipaSoundClassifier.mlmodel` is bundled as a subfolder `PipaSoundClassifierDataset/` inside this repository, and is also mirrored as a standalone repository, [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset), released under CC BY 4.0. The 887 MB of real audio is tracked there with Git LFS, while this repo carries the dataset's README, license and class-folder layout as the in-tree copy.
+The classifier above is only as good as the audio behind it, so that audio is published on its own rather than kept private. The training corpus behind `PipaSoundClassifier.mlmodel` lives in one place: the standalone repository [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset), released under CC BY 4.0, where all 887 MB of real audio is tracked with Git LFS. Neither app repository carries the audio; this repository keeps only an empty `PipaSoundClassifierDataset/` skeleton with the dataset's README, license and class folders. Both PluckBuddy-Bilingual and PluckBuddy-VirtualPipa draw their sound gate from this one dataset, so it is a shared asset rather than a fixture of a single app.
 
 - **What it holds**: 43 clips in total, roughly 887 MB, split into the four classes the gate needs — `pipa/` 7 clips of my own playing across different techniques, `other_instrument/` 24 clips of instruments I play myself plus three AI-generated guzheng pieces, `speech/` 6 clips of my own voice, `background/` 6 clips of everyday ambience
 - **Every clip is cleared for release**: each one is either self-recorded, contributed by family with permission, or AI-generated, so nothing third-party is republished
@@ -249,7 +249,7 @@ PluckBuddy/
 │   ├── PrivacyInfo.xcprivacy             # Privacy manifest
 │   ├── Animations/                       # Lottie animation JSON
 │   └── Assets.xcassets/                  # Assets (Logo, coach artwork, app icon)
-├── PipaSoundClassifierDataset/ # Training audio for PipaSoundClassifier — bundled subfolder; real 887 MB audio stays in the standalone repo via Git LFS
+├── PipaSoundClassifierDataset/ # Empty skeleton: README, licence and class folders only (.gitkeep); the 887 MB of audio lives in the standalone PipaSoundClassifierDataset repo via Git LFS, shared by both apps
 ├── docs/                       # Press kit: conference photos, demo clips, posters and the feature deck
 └── PluckBuddyTests/            # Unit test target
 ```
@@ -438,7 +438,7 @@ Source code of a personal project; discussion and learning welcome.
 
 ### 贡献 3 · 作为可复用数据资产公开的琵琶声音数据集
 
-上面那个分类器有多准，取决于它背后的音频。因此这批音频没有留在本地，而是作为子文件夹 PipaSoundClassifierDataset/ 内嵌在本工程里，同时也作为独立仓库 [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset)（以 CC BY 4.0 发布）镜像维护。887 MB 真实音频在那个独立仓库里走 Git LFS 跟踪，本工程只携带数据集的 README、许可和各类别文件夹骨架作为树内副本。
+上面那个分类器有多准，取决于它背后的音频。因此这批音频没有留在任何 App 工程里，而是只放在独立仓库 [github.com/ZehuiWU2009/PipaSoundClassifierDataset](https://github.com/ZehuiWU2009/PipaSoundClassifierDataset)，以 CC BY 4.0 发布，887 MB 真实音频在那里走 Git LFS 跟踪。本仓库只保留一个空的 PipaSoundClassifierDataset/ 骨架，放数据集的 README、许可和类别文件夹，不含音频。PluckBuddy-Bilingual 和 PluckBuddy-VirtualPipa 两个工程共用这一份数据集来训练声音判门，它是共享资产，不专属于某一个 App。
 
 - **收录了什么**：共 43 段、约 887 MB，按判门需要的四个类别分开——`pipa/` 7 段我自己弹的琵琶（覆盖不同指法）、`other_instrument/` 24 段我自己会演奏的乐器加三段 AI 生成的古筝、`speech/` 6 段我自己的声音、`background/` 6 段日常环境噪音
 - **每一段都可公开**：要么是本人录制，要么是家人录制并已获授权，要么是 AI 生成，没有转引他人录音
@@ -631,7 +631,7 @@ PluckBuddy/
 │   ├── PrivacyInfo.xcprivacy             # 隐私清单
 │   ├── Animations/                       # Lottie 动画 JSON
 │   └── Assets.xcassets/                  # 资源(Logo、教练插画、App 图标)
-├── PipaSoundClassifierDataset/ # PipaSoundClassifier 的训练音频——内嵌子文件夹;887 MB 真实音频在独立仓库走 Git LFS
+├── PipaSoundClassifierDataset/ # 空骨架：只有 README、许可和各类别文件夹（.gitkeep）；887 MB 音频在独立数据集仓库走 Git LFS，两个 App 工程共用
 ├── docs/                       # 展示物料:大会现场照片、演示视频、海报与英文功能介绍
 └── PluckBuddyTests/            # 单元测试 target
 ```
